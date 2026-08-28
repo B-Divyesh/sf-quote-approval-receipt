@@ -1,0 +1,8 @@
+{
+  "slug": "quote-approval-receipt",
+  "title": "Quote Approval Receipt",
+  "summary": "Capture who approved a quote and issue a timestamped receipt.",
+  "artifact_class": "web-with-backend",
+  "monetization": "freemium",
+  "success_measure": "At least 80% of pilot approvals include a named external approver, with fewer than 5% requiring manual follow-up."
+}
