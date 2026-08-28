@@ -348,9 +348,13 @@ async fn persist_database(state: &AppState) -> std::io::Result<()> {
         return Ok(());
     };
     let _guard = state.persist_lock.lock().await;
-    let temporary = destination.with_extension("sqlite3.next");
-    fs::copy(&state.db_path, &temporary).await?;
-    fs::rename(temporary, destination).await
+    fs::copy(&state.db_path, destination).await?;
+    fs::OpenOptions::new()
+        .read(true)
+        .open(destination)
+        .await?
+        .sync_all()
+        .await
 }
 
 async fn health() -> Json<serde_json::Value> {
