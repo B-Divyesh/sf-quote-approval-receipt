@@ -24,10 +24,14 @@ Audited 2026-08-28. Counts treat hyphenated terms and symbols as one word. No se
 | We store the approver details needed for that record. | 9 | pass |
 | No tracking scripts run here. | 5 | pass |
 | Keep receipts for one year | 5 | pass |
+| Checking whether new Studio licenses are available… | 7 | pass |
 | Studio adds 365-day retention. | 4 | pass |
 | The free tier keeps 30 days. | 6 | pass |
 | Sociobot/Dodo is the merchant of record. | 6 | pass |
 | Refunds are handled there. | 4 | pass |
+| New Studio purchases are paused. | 5 | pass |
+| Free links keep records for 30 days. | 7 | pass |
+| Studio availability could not be checked. | 6 | pass |
 
 ## Terminology
 

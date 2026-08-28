@@ -12,7 +12,7 @@ Open `/demo` after starting the service, or visit:
 
 https://quote-approval-receipt.sociobot.in/demo
 
-The demo creates a random 24-hour workspace with a Northstar Studio sample quote. Demo state stays separate from real quote records. See [`.factory/demo.md`](.factory/demo.md) for the sandbox contract.
+The demo creates a random workspace that expires after 24 hours. It stays separate from real quote records. See [`.factory/demo.md`](.factory/demo.md) for the sandbox contract.
 
 ## Run locally
 
@@ -42,15 +42,15 @@ The container listens on `PORT` (default `8080`). Set `DATA_DIR` or `DATABASE_UR
 
 ## Data and security
 
-Each real quote gets an unguessable approval token and a separate owner token. The owner token stays in that browser and authorizes export or deletion. Approval and receipt routes send `noindex` headers. The service stores a salted one-way network-address hash with each decision.
+Each real quote gets independent random approval and owner tokens. The owner token stays in that browser and authorizes export or deletion. Private pages and API responses use `noindex` and `no-store` response policies.
 
-All API routes are rate limited. The server trusts the first `X-Forwarded-For` value supplied by the factory ingress. It returns `429` and `Retry-After` when a client exceeds the limit.
+Each fixed quote accepts one final decision. API write bursts return `429` with `Retry-After` when they exceed the limit.
 
-Free links retain records for 30 days. A $29 one-time Studio license enables 365-day retention. Checkout and license verification use only the Sociobot billing API.
+Free links retain records for 30 days. A 365-day request succeeds only after the backend verifies a Studio license with Sociobot. The page offers the $29 checkout only while Sociobot reports that the product is available; existing license holders can restore a license at any time.
 
 ## Deploy
 
-Build the root `Dockerfile` and mount persistent storage at `/data`. The image runs as a non-root user and needs only `PORT`. The factory owns deployment, DNS, billing registration, and the production build SHA.
+Build the root `Dockerfile` and mount persistent storage at `/data`. SQLite deployments must use one replica because the database is a single-writer file. The image runs as a non-root user and needs only `PORT`. The factory owns deployment, DNS, billing registration, and the production build SHA.
 
 ## License
 

@@ -9,3 +9,17 @@
 .decision-panel input::placeholder,.decision-panel textarea::placeholder{color:#6b655c}
 .decision-panel .fine{color:var(--paper-hi)}
 .decision-panel .primary{background:var(--yellow);color:var(--ink)}
+
+/* Reflow and target-size guardrails. */
+html{max-width:100%}
+body{max-width:100%;overflow-x:hidden}
+p,h1,h2,h3,strong,small,span,code{overflow-wrap:anywhere}
+button,input,textarea,select{max-width:100%}
+main,.quote-paper,.receipt,.legal{min-width:0}
+.wordmark{min-width:44px;min-height:44px}
+.reel{flex:0 0 auto}
+.site-header nav a{min-width:44px;justify-content:center}
+.text-button{min-width:44px;min-height:44px;padding:8px}
+footer nav a,.demo-bar a{display:inline-flex;align-items:center;min-width:44px;min-height:44px;padding:8px 0}
+.demo-bar .text-button{min-height:44px}
+@media(max-width:780px){.site-header{gap:8px;padding:10px 16px}.wordmark-label{display:none}.site-header nav{min-width:0}.site-header nav a{padding:8px 0}}

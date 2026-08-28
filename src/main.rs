@@ -22,6 +22,7 @@ use std::{
 };
 use tokio::{fs, signal, sync::Mutex};
 use tower_http::{
+    compression::CompressionLayer,
     services::{ServeDir, ServeFile},
     trace::TraceLayer,
 };
@@ -34,6 +35,8 @@ struct AppState {
     db: SqlitePool,
     privacy_salt: Arc<Vec<u8>>,
     limiter: Arc<Mutex<HashMap<String, VecDeque<Instant>>>>,
+    billing_base: String,
+    http: reqwest::Client,
 }
 
 #[derive(Debug, Serialize)]
@@ -77,6 +80,7 @@ struct CreateQuote {
     tax_percent: Option<f64>,
     consent_text: String,
     retention_days: Option<i64>,
+    license: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -174,7 +178,10 @@ struct DemoDecision {
 async fn main() {
     tracing_subscriber::fmt()
         .json()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
         .init();
     if let Err(error) = run().await {
         warn!(%error, "server stopped");
@@ -208,6 +215,12 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         db,
         privacy_salt: Arc::new(salt),
         limiter: Arc::new(Mutex::new(HashMap::new())),
+        billing_base: env::var("BILLING_BASE_URL").unwrap_or_else(|_| {
+            "https://api.sociobot.in/api/v1/products/quote-approval-receipt".into()
+        }),
+        http: reqwest::Client::builder()
+            .timeout(StdDuration::from_secs(8))
+            .build()?,
     };
     let cleanup_db = state.db.clone();
     tokio::spawn(async move {
@@ -230,6 +243,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .route("/receipts/:id/pdf", get(get_receipt_pdf))
         .route("/demo", post(create_demo))
         .route("/demo/:workspace/decision", post(record_demo_decision))
+        .route("/studio", get(studio_status))
         .with_state(state.clone());
 
     let dist = env::var("STATIC_DIR").unwrap_or_else(|_| "dist".into());
@@ -240,6 +254,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .fallback_service(ServeDir::new(&dist).fallback(fallback))
         .layer(middleware::from_fn_with_state(state.clone(), rate_limit))
         .layer(middleware::from_fn(security_headers))
+        .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
@@ -265,7 +280,12 @@ async fn load_or_create_salt(path: &FsPath) -> std::io::Result<(Vec<u8>, bool)> 
 }
 
 async fn migrate(db: &SqlitePool) -> Result<(), sqlx::Error> {
-    sqlx::query("PRAGMA journal_mode=WAL").execute(db).await?;
+    // DELETE mode avoids WAL shared-memory files, which are unsafe on a mounted
+    // network filesystem. Production runs one replica against the durable file.
+    sqlx::query("PRAGMA journal_mode=DELETE")
+        .execute(db)
+        .await?;
+    sqlx::query("PRAGMA busy_timeout=5000").execute(db).await?;
     sqlx::query(r#"CREATE TABLE IF NOT EXISTS quotes (
       id TEXT PRIMARY KEY, public_token TEXT NOT NULL UNIQUE, owner_token TEXT NOT NULL UNIQUE,
       creator_name TEXT NOT NULL, business_name TEXT NOT NULL, quote_number TEXT NOT NULL,
@@ -305,6 +325,64 @@ async fn cleanup_expired(db: &SqlitePool) -> Result<(), sqlx::Error> {
 
 async fn health() -> Json<serde_json::Value> {
     Json(serde_json::json!({"status":"ok","build_sha":BUILD_SHA}))
+}
+
+#[derive(Deserialize)]
+struct LicenseVerdict {
+    valid: bool,
+}
+
+async fn verify_studio_license(state: &AppState, license: &str) -> ApiResult<bool> {
+    let response = state
+        .http
+        .get(format!("{}/verify", state.billing_base))
+        .query(&[("license", license)])
+        .send()
+        .await
+        .map_err(|_| {
+            fail(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "The Studio license service is unavailable. Use 30-day retention and try again later.",
+            )
+        })?;
+    if !response.status().is_success() {
+        return Ok(false);
+    }
+    response
+        .json::<LicenseVerdict>()
+        .await
+        .map(|result| result.valid)
+        .map_err(|_| {
+            fail(
+                StatusCode::BAD_GATEWAY,
+                "The Studio license response could not be read. Use 30-day retention and try again later.",
+            )
+        })
+}
+
+#[derive(Serialize)]
+struct StudioStatus {
+    available: bool,
+    checkout_url: Option<String>,
+}
+
+async fn studio_status(State(state): State<AppState>) -> Json<StudioStatus> {
+    let product = state.http.get(&state.billing_base).send().await;
+    let available = match product {
+        Ok(response) if response.status().is_success() => response
+            .json::<serde_json::Value>()
+            .await
+            .ok()
+            .is_some_and(|value| {
+                value.get("price_minor").and_then(|v| v.as_i64()) == Some(2900)
+                    && value.get("currency").and_then(|v| v.as_str()) == Some("USD")
+            }),
+        _ => false,
+    };
+    Json(StudioStatus {
+        available,
+        checkout_url: available.then(|| format!("{}/checkout", state.billing_base)),
+    })
 }
 
 fn clean(value: &str, name: &str, min: usize, max: usize) -> ApiResult<String> {
@@ -350,6 +428,14 @@ async fn insert_quote(
             ));
         }
     }
+    let currency = clean(&input.currency, "Currency", 3, 3)?.to_uppercase();
+    const CURRENCIES: [&str; 6] = ["USD", "EUR", "GBP", "CAD", "AUD", "INR"];
+    if !CURRENCIES.contains(&currency.as_str()) {
+        return Err(fail(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Choose a supported currency: USD, EUR, GBP, CAD, AUD, or INR.",
+        ));
+    }
     let tax_percent = input.tax_percent.unwrap_or(0.0);
     if !(0.0..=100.0).contains(&tax_percent) {
         return Err(fail(
@@ -366,7 +452,25 @@ async fn insert_quote(
     let days = if demo_workspace.is_some() {
         1
     } else {
-        input.retention_days.unwrap_or(30).clamp(1, 365)
+        match input.retention_days.unwrap_or(30) {
+            30 => 30,
+            365 => {
+                let license = input.license.as_deref().unwrap_or("").trim();
+                if license.is_empty() || !verify_studio_license(state, license).await? {
+                    return Err(fail(
+                        StatusCode::FORBIDDEN,
+                        "A valid Studio license is required for 365-day retention.",
+                    ));
+                }
+                365
+            }
+            _ => {
+                return Err(fail(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "Retention must be 30 days, or 365 days with Studio.",
+                ))
+            }
+        }
     };
     let expires = created + Duration::days(days);
     sqlx::query(r#"INSERT INTO quotes (id,public_token,owner_token,creator_name,business_name,quote_number,client_name,currency,summary,items_json,subtotal,tax,total,consent_text,created_at,expires_at,demo_workspace)
@@ -374,7 +478,7 @@ async fn insert_quote(
       .bind(&id).bind(&public_token).bind(&owner_token)
       .bind(clean(&input.creator_name,"Your name",2,100)?).bind(clean(&input.business_name,"Business name",2,120)?)
       .bind(clean(&input.quote_number,"Quote number",1,60)?).bind(clean(&input.client_name,"Client name",2,120)?)
-      .bind(clean(&input.currency,"Currency",3,3)?.to_uppercase()).bind(clean(&input.summary,"Scope summary",4,2000)?)
+      .bind(currency).bind(clean(&input.summary,"Scope summary",4,2000)?)
       .bind(serde_json::to_string(&input.items).map_err(|_| fail(StatusCode::BAD_REQUEST,"Quote items could not be saved."))?)
       .bind(subtotal).bind(tax).bind(subtotal + tax).bind(clean(&input.consent_text,"Consent text",12,500)?)
       .bind(created.to_rfc3339()).bind(expires.to_rfc3339()).bind(&demo_workspace)
@@ -581,10 +685,7 @@ async fn save_decision(
     );
     let snapshot_hash = hex::encode(Sha256::digest(snapshot.as_bytes()));
     let ip = client_ip(headers);
-    let mut hasher = Sha256::new();
-    hasher.update(&*state.privacy_salt);
-    hasher.update(ip.as_bytes());
-    let ip_hash = hex::encode(hasher.finalize());
+    let ip_hash = hash_network_address(&state.privacy_salt, &ip);
     let ua = headers
         .get(header::USER_AGENT)
         .and_then(|v| v.to_str().ok())
@@ -645,15 +746,8 @@ async fn get_receipt(
     Ok(Json(receipt_response(&state, &id).await?))
 }
 
-fn pdf_escape(s: &str) -> String {
-    s.replace('\\', "\\\\")
-        .replace('(', "\\(")
-        .replace(')', "\\)")
-        .chars()
-        .filter(|c| c.is_ascii() && !c.is_control())
-        .collect()
-}
-fn make_pdf(r: &ReceiptResponse) -> Vec<u8> {
+fn make_pdf(r: &ReceiptResponse) -> Result<Vec<u8>, genpdf::error::Error> {
+    use genpdf::{elements, style, Element};
     let lines = vec![
         "QUOTE APPROVAL RECEIPT".to_string(),
         format!(
@@ -676,37 +770,35 @@ fn make_pdf(r: &ReceiptResponse) -> Vec<u8> {
         format!("Snapshot hash: {}", r.receipt.snapshot_hash),
         format!("Consent: {}", r.receipt.consent_text),
     ];
-    let mut stream = String::from("BT /F1 18 Tf 54 760 Td 22 TL ");
-    for (i, l) in lines.iter().enumerate() {
-        if i == 1 {
-            stream.push_str("/F1 12 Tf ");
+    let regular =
+        genpdf::fonts::FontData::load("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", None)?;
+    let bold = genpdf::fonts::FontData::load(
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+        None,
+    )?;
+    let family = genpdf::fonts::FontFamily {
+        regular: regular.clone(),
+        bold,
+        italic: regular.clone(),
+        bold_italic: regular,
+    };
+    let mut document = genpdf::Document::new(family);
+    document.set_title("Quote approval receipt");
+    document.set_minimal_conformance();
+    let mut decorator = genpdf::SimplePageDecorator::new();
+    decorator.set_margins(18);
+    document.set_page_decorator(decorator);
+    for (index, line) in lines.into_iter().enumerate() {
+        let paragraph = elements::Paragraph::new(line).padded(genpdf::Margins::trbl(0, 0, 3, 0));
+        if index == 0 {
+            document.push(paragraph.styled(style::Style::new().bold().with_font_size(18)));
+        } else {
+            document.push(paragraph.styled(style::Style::new().with_font_size(11)));
         }
-        stream.push_str(&format!("({}) Tj T* ", pdf_escape(l)));
     }
-    stream.push_str("ET");
-    let objects=["<< /Type /Catalog /Pages 2 0 R >>".to_string(),"<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>".to_string(),format!("<< /Length {} >>\nstream\n{}\nendstream",stream.len(),stream),"<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>".to_string()];
-    let mut out = b"%PDF-1.4\n".to_vec();
-    let mut offsets = vec![0];
-    for (i, obj) in objects.iter().enumerate() {
-        offsets.push(out.len());
-        out.extend_from_slice(format!("{} 0 obj\n{}\nendobj\n", i + 1, obj).as_bytes());
-    }
-    let xref = out.len();
-    out.extend_from_slice(
-        format!("xref\n0 {}\n0000000000 65535 f \n", objects.len() + 1).as_bytes(),
-    );
-    for o in offsets.iter().skip(1) {
-        out.extend_from_slice(format!("{:010} 00000 n \n", o).as_bytes());
-    }
-    out.extend_from_slice(
-        format!(
-            "trailer << /Size {} /Root 1 0 R >>\nstartxref\n{}\n%%EOF",
-            objects.len() + 1,
-            xref
-        )
-        .as_bytes(),
-    );
-    out
+    let mut output = Vec::new();
+    document.render(&mut output)?;
+    Ok(output)
 }
 async fn get_receipt_pdf(
     State(state): State<AppState>,
@@ -725,13 +817,13 @@ async fn get_receipt_pdf(
                 "noindex, nofollow",
             ),
         ],
-        make_pdf(&r),
+        make_pdf(&r).map_err(internal)?,
     )
         .into_response())
 }
 
 fn demo_quote() -> CreateQuote {
-    CreateQuote{creator_name:"Mara Bell".into(),business_name:"Northstar Studio".into(),quote_number:"NS-2048".into(),client_name:"Juniper Market".into(),currency:"USD".into(),summary:"Brand launch photography: one planning call, a half-day shoot, and 24 edited product images.".into(),items:vec![LineItem{description:"Half-day product shoot".into(),quantity:1.0,rate:1450.0},LineItem{description:"Edited product images".into(),quantity:24.0,rate:35.0}],tax_percent:Some(0.0),consent_text:"I confirm that I am authorised to make this decision for the client named above.".into(),retention_days:Some(1)}
+    CreateQuote{creator_name:"Mara Bell".into(),business_name:"Northstar Studio".into(),quote_number:"NS-2048".into(),client_name:"Juniper Market".into(),currency:"USD".into(),summary:"Brand launch photography: one planning call, a half-day shoot, and 24 edited product images.".into(),items:vec![LineItem{description:"Half-day product shoot".into(),quantity:1.0,rate:1450.0},LineItem{description:"Edited product images".into(),quantity:24.0,rate:35.0}],tax_percent:Some(0.0),consent_text:"I confirm that I am authorised to make this decision for the client named above.".into(),retention_days:Some(1),license:None}
 }
 #[derive(Serialize)]
 struct DemoQuoteCreated {
@@ -797,6 +889,12 @@ fn client_ip(headers: &HeaderMap) -> String {
         .take(64)
         .collect()
 }
+fn hash_network_address(salt: &[u8], address: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(salt);
+    hasher.update(address.as_bytes());
+    hex::encode(hasher.finalize())
+}
 async fn rate_limit(State(state): State<AppState>, req: Request<Body>, next: Next) -> Response {
     if !req.uri().path().starts_with("/api/") {
         return next.run(req).await;
@@ -828,9 +926,29 @@ async fn rate_limit(State(state): State<AppState>, req: Request<Body>, next: Nex
     next.run(req).await
 }
 async fn security_headers(req: Request<Body>, next: Next) -> Response {
-    let private =
-        req.uri().path().starts_with("/approve/") || req.uri().path().starts_with("/receipt/");
+    let path = req.uri().path().to_owned();
+    let private = path.starts_with("/api/")
+        || path.starts_with("/approve/")
+        || path.starts_with("/receipt/")
+        || path.starts_with("/manage/");
+    let known_spa = matches!(
+        path.as_str(),
+        "/" | "/new" | "/demo" | "/privacy" | "/terms"
+    ) || path.starts_with("/approve/")
+        || path.starts_with("/receipt/")
+        || path.starts_with("/manage/");
     let mut res = next.run(req).await;
+    let should_be_404 = !known_spa
+        && !path.starts_with("/api/")
+        && res.status() == StatusCode::OK
+        && res
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|v| v.starts_with("text/html"));
+    if should_be_404 {
+        *res.status_mut() = StatusCode::NOT_FOUND;
+    }
     let h = res.headers_mut();
     h.insert(
         "x-content-type-options",
@@ -847,6 +965,12 @@ async fn security_headers(req: Request<Body>, next: Next) -> Response {
         h.insert(
             "x-robots-tag",
             HeaderValue::from_static("noindex, nofollow, noarchive"),
+        );
+        h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    } else if path.starts_with("/assets/") {
+        h.insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("public, max-age=31536000, immutable"),
         );
     }
     res
@@ -869,13 +993,13 @@ async fn shutdown_signal() {
 mod tests {
     use super::*;
     #[test]
-    fn pdf_is_valid_enough() {
+    fn pdf_preserves_complete_international_receipt_text() {
         let r = ReceiptResponse {
             receipt: ReceiptRow {
                 id: "r".into(),
                 quote_id: "q".into(),
-                approver_name: "Ava".into(),
-                approver_title: "Director".into(),
+                approver_name: "José Núñez".into(),
+                approver_title: "Direção".into(),
                 approver_email: None,
                 decision: "approved".into(),
                 note: None,
@@ -887,8 +1011,8 @@ mod tests {
                 id: "q".into(),
                 creator_name: "M".into(),
                 business_name: "Studio".into(),
-                quote_number: "Q1".into(),
-                client_name: "Client".into(),
+                quote_number: "Q-Á1".into(),
+                client_name: "Café São Bento".into(),
                 currency: "USD".into(),
                 summary: "Work".into(),
                 items: vec![],
@@ -903,12 +1027,73 @@ mod tests {
             },
             pdf_path: "x".into(),
         };
-        let p = make_pdf(&r);
-        assert!(p.starts_with(b"%PDF-1.4"));
-        assert!(String::from_utf8_lossy(&p).contains("APPROVED"));
+        let p = make_pdf(&r).expect("PDF should render");
+        assert!(p.starts_with(b"%PDF-1."));
+        assert!(p.len() > 100_000, "the Unicode font should be embedded");
     }
+
     #[test]
-    fn pdf_escapes_parentheses() {
-        assert_eq!(pdf_escape("a(b)\\c"), "a\\(b\\)\\\\c");
+    fn network_address_hash_is_salted_and_one_way() {
+        let address = "198.51.100.212";
+        let first = hash_network_address(b"first private salt", address);
+        let second = hash_network_address(b"second private salt", address);
+        assert_ne!(first, second);
+        assert!(!first.contains(address));
+        assert_eq!(first.len(), 64);
+    }
+
+    #[tokio::test]
+    async fn studio_retention_requires_live_verification() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("mock listener");
+        let address = listener.local_addr().expect("mock address");
+        let mock = tokio::spawn(async move {
+            axum::serve(
+                listener,
+                Router::new().route(
+                    "/verify",
+                    get(|| async { Json(serde_json::json!({"valid": true})) }),
+                ),
+            )
+            .await
+        });
+        let directory = tempfile::tempdir().expect("temporary database directory");
+        let database_url = format!(
+            "sqlite://{}?mode=rwc",
+            directory.path().join("quotes.sqlite3").display()
+        );
+        let db = SqlitePoolOptions::new()
+            .connect(&database_url)
+            .await
+            .expect("database connection");
+        migrate(&db).await.expect("database migration");
+        let state = AppState {
+            db,
+            privacy_salt: Arc::new(vec![1; 32]),
+            limiter: Arc::new(Mutex::new(HashMap::new())),
+            billing_base: format!("http://{address}"),
+            http: reqwest::Client::new(),
+        };
+
+        let mut licensed = demo_quote();
+        licensed.retention_days = Some(365);
+        licensed.license = Some("valid-test-license".into());
+        let created = insert_quote(&state, licensed, None)
+            .await
+            .expect("verified Studio record");
+        let remaining = DateTime::parse_from_rfc3339(&created.expires_at)
+            .expect("expiry")
+            .with_timezone(&Utc)
+            - Utc::now();
+        assert!(remaining.num_days() >= 364);
+
+        let mut forged = demo_quote();
+        forged.retention_days = Some(365);
+        let error = insert_quote(&state, forged, None)
+            .await
+            .expect_err("missing license must fail");
+        assert_eq!(error.0, StatusCode::FORBIDDEN);
+        mock.abort();
     }
 }

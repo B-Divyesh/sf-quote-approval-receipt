@@ -1,7 +1,65 @@
 [
-  {"id":"demo-sandbox","claim":"The sample demo does not add anything to real records.","where":"landing action note and demo banner","test":"npm test -- --grep @claim:demo-sandbox","sandbox":"fresh browser context; open /demo; verify the quote is demo-scoped and no owner keys exist"},
-  {"id":"pdf-receipt","claim":"A decision produces a timestamped PDF receipt.","where":"landing facts and receipt screen","test":"npm test -- --grep @claim:pdf-receipt","sandbox":"fresh demo workspace; approve the sample; assert named receipt and downloaded PDF header"},
-  {"id":"record-control","claim":"The sender can export or delete each record.","where":"landing facts and privacy page","test":"npm test -- --grep @claim:record-control","sandbox":"create a fresh quote; export it with its owner key; delete it; assert the share link returns 404"},
-  {"id":"first-party-only","claim":"No analytics, advertising, or other third-party runtime scripts load.","where":"landing privacy section and privacy page","test":"npm test -- --grep @claim:first-party-only","sandbox":"fresh browser context; capture every request through landing and demo; assert all are same-origin"},
-  {"id":"studio-retention","claim":"$29 once. Studio adds 365-day retention.","where":"pricing section and terms","test":"npm test -- --grep @claim:studio-retention","sandbox":"fresh browser context; assert exact price, retention copy, and product checkout URL"}
+  {
+    "id": "demo-sandbox",
+    "claim": "The sample demo stays separate from real records and remains readable after creation.",
+    "where": "landing action note, demo banner, README, privacy",
+    "test": "npm test -- --grep @claim:demo-sandbox",
+    "sandbox": "fresh browser context; open /demo; verify no owner keys and repeat the post-create read 16 times"
+  },
+  {
+    "id": "pdf-receipt",
+    "claim": "A decision produces a timestamped PDF containing the named approver and fixed quote snapshot.",
+    "where": "landing facts, receipt screen, README",
+    "test": "npm test -- --grep @claim:pdf-receipt",
+    "sandbox": "fresh record; approve as José Núñez — Direção; extract PDF text and assert identity, timestamp, client, quote, hash, and consent"
+  },
+  {
+    "id": "record-control",
+    "claim": "The sender can export or delete each record.",
+    "where": "landing facts, privacy, README",
+    "test": "npm test -- --grep @claim:record-control",
+    "sandbox": "fresh record; export with owner token, delete it, and assert its approval link returns 404"
+  },
+  {
+    "id": "first-party-only",
+    "claim": "No analytics, advertising, or third-party runtime scripts load.",
+    "where": "landing privacy section and privacy page",
+    "test": "npm test -- --grep @claim:first-party-only",
+    "sandbox": "capture every browser request through landing and demo and assert all are same-origin"
+  },
+  {
+    "id": "retention-policy",
+    "claim": "Free records expire after 30 days, demos after 24 hours, and 365 days requires a server-verified Studio license.",
+    "where": "quote builder, privacy, terms, README",
+    "test": "npm test -- --grep @claim:retention-policy",
+    "sandbox": "assert exact API expiry windows and that a direct forged 365-day request returns 403"
+  },
+  {
+    "id": "private-links",
+    "claim": "Approval and owner links use independent random tokens, and private responses are noindex and no-store.",
+    "where": "created screen and README",
+    "test": "npm test -- --grep @claim:private-links",
+    "sandbox": "create two records; validate distinct token shapes and private route response headers"
+  },
+  {
+    "id": "single-decision",
+    "claim": "Each fixed quote accepts one final decision.",
+    "where": "approval screen and README",
+    "test": "npm test -- --grep @claim:single-decision",
+    "sandbox": "submit two concurrent decisions and assert one 201 receipt and one 409 conflict"
+  },
+  {
+    "id": "network-address-privacy",
+    "claim": "Network addresses are salted before storage and never appear in receipts or sender exports.",
+    "where": "privacy page",
+    "test": "npm test -- --grep @claim:network-address-privacy",
+    "sandbox": "record a decision with a known forwarded address; unit-test salted hashing and assert the address is absent from receipt and export"
+  },
+  {
+    "id": "rate-limits",
+    "claim": "API write bursts are rate limited with retry guidance.",
+    "where": "README",
+    "test": "npm test -- --grep @claim:rate-limits",
+    "sandbox": "send a 20-request write burst and assert 429 plus Retry-After"
+  }
 ]

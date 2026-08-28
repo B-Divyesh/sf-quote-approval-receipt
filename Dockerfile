@@ -14,7 +14,10 @@ COPY src ./src
 RUN cargo build --release
 
 FROM debian:bookworm-slim AS runtime
-RUN groupadd --system app && useradd --system --gid app --home-dir /app app && mkdir -p /app/dist /data && chown -R app:app /app /data
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system app && useradd --system --gid app --home-dir /app app \
+    && mkdir -p /app/dist /data && chown -R app:app /app /data
 WORKDIR /app
 COPY --from=backend /src/target/release/quote-approval-receipt /app/server
 COPY --from=frontend /src/dist /app/dist
