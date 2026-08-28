@@ -31,16 +31,29 @@ async function stop(child) {
 
 try {
   const first = await start(join(root, 'local-one'));
-  const created = await (await fetch(`http://127.0.0.1:${first.port}/api/demo`, { method: 'POST' })).json();
-  assert.equal(created.quote.public_token.length, 32);
+  const tokens = [];
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const create = await fetch(`http://127.0.0.1:${first.port}/api/demo`, {
+      method: 'POST',
+      headers: { 'x-forwarded-for': `198.51.100.${attempt + 1}` },
+    });
+    assert.equal(create.status, 201, `demo ${attempt + 1} is committed before replacement`);
+    const created = await create.json();
+    assert.equal(created.quote.public_token.length, 32);
+    tokens.push(created.quote.public_token);
+  }
   await stop(first.child);
 
   const second = await start(join(root, 'local-two'));
-  const response = await fetch(`http://127.0.0.1:${second.port}/api/share/${created.quote.public_token}`);
-  assert.equal(response.status, 200, 'a new process restores the committed durable snapshot');
-  assert.equal((await response.json()).demo, true);
+  for (const [index, token] of tokens.entries()) {
+    const response = await fetch(`http://127.0.0.1:${second.port}/api/share/${token}`, {
+      headers: { 'x-forwarded-for': `198.51.101.${index + 1}` },
+    });
+    assert.equal(response.status, 200, `demo ${index + 1} is restored after replacement`);
+    assert.equal((await response.json()).demo, true);
+  }
   await stop(second.child);
-  console.log('@claim:durable-snapshot a committed record survives a fresh process through the durable state directory');
+  console.log('@claim:durable-snapshot 20 committed records survive a replacement process through the durable state directory');
 } finally {
   await rm(root, { recursive: true, force: true });
 }

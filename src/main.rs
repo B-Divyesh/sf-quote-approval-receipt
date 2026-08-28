@@ -354,7 +354,12 @@ async fn persist_database(state: &AppState) -> std::io::Result<()> {
 
 async fn copy_file_bytes(source: &FsPath, destination: &FsPath) -> std::io::Result<()> {
     let bytes = fs::read(source).await?;
-    fs::write(destination, bytes).await
+    // The mounted share is a replacement snapshot, so never expose a
+    // truncated database if a process stops while writing it. This service is
+    // intentionally one writer; a stable sibling name is therefore enough.
+    let temporary = destination.with_extension("sqlite3.next");
+    fs::write(&temporary, bytes).await?;
+    fs::rename(temporary, destination).await
 }
 
 async fn health() -> Json<serde_json::Value> {
