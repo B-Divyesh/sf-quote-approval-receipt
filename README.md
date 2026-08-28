@@ -50,7 +50,7 @@ Free links retain records for 30 days. A 365-day request succeeds only after the
 
 ## Deploy
 
-Build the root `Dockerfile`. The image runs as the non-root `app` user and needs only `PORT` to start. For the factory Container Apps release, keep exactly one replica and mount its dedicated Azure Files share at `/durable`; set `DURABLE_DATA_DIR=/durable`. The service writes a durable snapshot after each committed change, so a replacement process restores records before serving traffic. Durable storage is an optional deployment override for local use. The factory owns deployment, DNS, billing registration, and the production build SHA.
+Build the root `Dockerfile`. The image runs as the non-root `app` user and needs only `PORT` to start. For the factory Container Apps release, keep exactly one replica and mount its dedicated Azure Files share at `/durable`; set `DURABLE_DATA_DIR=/durable`. The service opens `/durable/quotes.sqlite3` directly, so every serving process sees the same committed records during a rollout. Durable storage is an optional deployment override for local use. The factory owns deployment, DNS, billing registration, and the production build SHA.
 
 ## License
 
