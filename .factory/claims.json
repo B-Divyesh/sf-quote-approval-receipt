@@ -1,0 +1,7 @@
+[
+  {"id":"demo-sandbox","claim":"The sample demo does not add anything to real records.","where":"landing action note and demo banner","test":"npm test -- --grep @claim:demo-sandbox","sandbox":"fresh browser context; open /demo; verify the quote is demo-scoped and no owner keys exist"},
+  {"id":"pdf-receipt","claim":"A decision produces a timestamped PDF receipt.","where":"landing facts and receipt screen","test":"npm test -- --grep @claim:pdf-receipt","sandbox":"fresh demo workspace; approve the sample; assert named receipt and downloaded PDF header"},
+  {"id":"record-control","claim":"The sender can export or delete each record.","where":"landing facts and privacy page","test":"npm test -- --grep @claim:record-control","sandbox":"create a fresh quote; export it with its owner key; delete it; assert the share link returns 404"},
+  {"id":"first-party-only","claim":"No analytics, advertising, or other third-party runtime scripts load.","where":"landing privacy section and privacy page","test":"npm test -- --grep @claim:first-party-only","sandbox":"fresh browser context; capture every request through landing and demo; assert all are same-origin"},
+  {"id":"studio-retention","claim":"$29 once. Studio adds 365-day retention.","where":"pricing section and terms","test":"npm test -- --grep @claim:studio-retention","sandbox":"fresh browser context; assert exact price, retention copy, and product checkout URL"}
+]
