@@ -212,7 +212,7 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .then(|| durable_dir.as_ref().map(|dir| dir.join("quotes.sqlite3")))
         .flatten();
     if let Some(source) = durable_db.as_ref().filter(|path| path.exists()) {
-        fs::copy(source, &db_path).await?;
+        copy_file_bytes(source, &db_path).await?;
     }
     let database_url =
         database_override.unwrap_or_else(|| format!("sqlite://{}?mode=rwc", db_path.display()));
@@ -348,13 +348,12 @@ async fn persist_database(state: &AppState) -> std::io::Result<()> {
         return Ok(());
     };
     let _guard = state.persist_lock.lock().await;
-    fs::copy(&state.db_path, destination).await?;
-    fs::OpenOptions::new()
-        .read(true)
-        .open(destination)
-        .await?
-        .sync_all()
-        .await
+    copy_file_bytes(&state.db_path, destination).await
+}
+
+async fn copy_file_bytes(source: &FsPath, destination: &FsPath) -> std::io::Result<()> {
+    let bytes = fs::read(source).await?;
+    fs::write(destination, bytes).await
 }
 
 async fn health() -> Json<serde_json::Value> {
@@ -1162,7 +1161,7 @@ mod tests {
             .await
             .expect("record creation");
         state.db.close().await;
-        fs::copy(&durable, directory.path().join("restored.sqlite3"))
+        copy_file_bytes(&durable, &directory.path().join("restored.sqlite3"))
             .await
             .expect("restore snapshot");
         let restored = SqlitePoolOptions::new()
