@@ -12,7 +12,7 @@ use rand::{distributions::Alphanumeric, Rng, RngCore};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{
-    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions},
     FromRow, SqlitePool,
 };
 use std::{
@@ -228,7 +228,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         // A shared mounted SQLite file can be briefly locked by another
         // process. Wait for it instead of turning a just-created quote into a
         // spurious missing-record response.
-        .busy_timeout(StdDuration::from_secs(5));
+        .busy_timeout(StdDuration::from_secs(5))
+        // WAL needs shared memory and is not safe on a network-mounted file.
+        // Rollback journaling uses the mounted filesystem's normal locks.
+        .journal_mode(SqliteJournalMode::Delete);
     let db = SqlitePoolOptions::new()
         // One connection per process keeps the SQLite writer boundary clear.
         .max_connections(1)
