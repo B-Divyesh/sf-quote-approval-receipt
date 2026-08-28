@@ -206,7 +206,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     info!(database = %db_path.display(), privacy_salt = if generated { "generated" } else { "persisted" }, build_sha = BUILD_SHA, "configuration ready");
 
     let db = SqlitePoolOptions::new()
-        .max_connections(8)
+        // This service deliberately deploys as one replica with one SQLite
+        // connection. The database lives on its durable mounted volume.
+        .max_connections(1)
         .connect(&database_url)
         .await?;
     migrate(&db).await?;
@@ -280,12 +282,6 @@ async fn load_or_create_salt(path: &FsPath) -> std::io::Result<(Vec<u8>, bool)> 
 }
 
 async fn migrate(db: &SqlitePool) -> Result<(), sqlx::Error> {
-    // DELETE mode avoids WAL shared-memory files, which are unsafe on a mounted
-    // network filesystem. Production runs one replica against the durable file.
-    sqlx::query("PRAGMA journal_mode=DELETE")
-        .execute(db)
-        .await?;
-    sqlx::query("PRAGMA busy_timeout=5000").execute(db).await?;
     sqlx::query(r#"CREATE TABLE IF NOT EXISTS quotes (
       id TEXT PRIMARY KEY, public_token TEXT NOT NULL UNIQUE, owner_token TEXT NOT NULL UNIQUE,
       creator_name TEXT NOT NULL, business_name TEXT NOT NULL, quote_number TEXT NOT NULL,
