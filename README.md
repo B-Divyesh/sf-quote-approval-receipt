@@ -38,7 +38,7 @@ docker build --build-arg BUILD_SHA=local -t quote-approval-receipt .
 
 `npm test` builds the frontend, runs Rust tests, starts the service, and runs the Playwright claim, mobile, rate-limit, and accessibility checks. The frontend output is `dist/`.
 
-The container listens on `PORT` (default `8080`). Set `DATA_DIR` or `DATABASE_URL` only when you need to override the persisted SQLite location. `/health` reports the build SHA.
+The container listens on `PORT` (default `8080`). It starts with no required configuration, creates a random privacy salt on first boot, and `/health` reports the build SHA. Set `DATA_DIR` or `DATABASE_URL` only when you need to override the persisted SQLite location.
 
 ## Data and security
 
@@ -50,7 +50,7 @@ Free links retain records for 30 days. A 365-day request succeeds only after the
 
 ## Deploy
 
-Build the root `Dockerfile` and mount persistent storage at `/data`. Set `DURABLE_DATA_DIR=/data` and keep one replica. The service runs SQLite on local disk and atomically snapshots each committed change to the mounted volume. The image runs as a non-root user and needs only `PORT`; durable storage is an optional deployment override. The factory owns deployment, DNS, billing registration, and the production build SHA.
+Build the root `Dockerfile`. The image runs as the non-root `app` user and needs only `PORT` to start. For the factory Container Apps release, keep exactly one replica and mount its dedicated Azure Files share at `/durable`; set `DURABLE_DATA_DIR=/durable`. The service writes a durable snapshot after each committed change, so a replacement process restores records before serving traffic. Durable storage is an optional deployment override for local use. The factory owns deployment, DNS, billing registration, and the production build SHA.
 
 ## License
 

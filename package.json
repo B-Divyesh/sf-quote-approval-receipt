@@ -7,7 +7,9 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "start": "cargo run",
-    "test": "npm run build && cargo test && playwright test",
+    "test": "npm run build && cargo test && npm run test:runtime-contract && npm run test:durable-snapshot && playwright test",
+    "test:runtime-contract": "cargo build --release && node tests/runtime-contract.mjs",
+    "test:durable-snapshot": "node tests/durable-snapshot.mjs",
     "test:ui": "playwright test",
     "check": "tsc --noEmit"
   },

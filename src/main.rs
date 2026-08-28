@@ -132,6 +132,7 @@ struct PublicQuote {
     created_at: String,
     expires_at: String,
     decided: bool,
+    receipt_id: Option<String>,
     demo: bool,
 }
 
@@ -552,13 +553,16 @@ async fn find_public(state: &AppState, token: &str) -> ApiResult<QuoteRow> {
     Ok(quote)
 }
 
-async fn public_quote(state: &AppState, quote: QuoteRow) -> ApiResult<PublicQuote> {
-    let decided = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM decisions WHERE quote_id=?")
+async fn public_quote(
+    state: &AppState,
+    quote: QuoteRow,
+    include_receipt_id: bool,
+) -> ApiResult<PublicQuote> {
+    let receipt_id = sqlx::query_scalar::<_, String>("SELECT id FROM decisions WHERE quote_id=?")
         .bind(&quote.id)
-        .fetch_one(&state.db)
+        .fetch_optional(&state.db)
         .await
-        .map_err(internal)?
-        > 0;
+        .map_err(internal)?;
     Ok(PublicQuote {
         id: quote.id,
         creator_name: quote.creator_name,
@@ -574,7 +578,8 @@ async fn public_quote(state: &AppState, quote: QuoteRow) -> ApiResult<PublicQuot
         consent_text: quote.consent_text,
         created_at: quote.created_at,
         expires_at: quote.expires_at,
-        decided,
+        decided: receipt_id.is_some(),
+        receipt_id: include_receipt_id.then_some(receipt_id).flatten(),
         demo: quote.demo_workspace.is_some(),
     })
 }
@@ -584,7 +589,7 @@ async fn get_shared_quote(
     Path(token): Path<String>,
 ) -> ApiResult<Json<PublicQuote>> {
     let quote = find_public(&state, &token).await?;
-    Ok(Json(public_quote(&state, quote).await?))
+    Ok(Json(public_quote(&state, quote, false).await?))
 }
 
 fn owner(headers: &HeaderMap) -> ApiResult<&str> {
@@ -611,7 +616,7 @@ async fn get_owned_quote(
     headers: HeaderMap,
 ) -> ApiResult<Json<PublicQuote>> {
     let row = owned_row(&state, &id, owner(&headers)?).await?;
-    Ok(Json(public_quote(&state, row).await?))
+    Ok(Json(public_quote(&state, row, true).await?))
 }
 
 async fn export_quote(
@@ -620,7 +625,7 @@ async fn export_quote(
     headers: HeaderMap,
 ) -> ApiResult<Response> {
     let row = owned_row(&state, &id, owner(&headers)?).await?;
-    let quote = public_quote(&state, row).await?;
+    let quote = public_quote(&state, row, true).await?;
     let receipt = sqlx::query_as::<_,ReceiptRow>("SELECT id,quote_id,approver_name,approver_title,approver_email,decision,note,consent_text,decided_at,snapshot_hash FROM decisions WHERE quote_id=?").bind(&id).fetch_optional(&state.db).await.map_err(internal)?;
     let body = serde_json::to_vec_pretty(&serde_json::json!({"quote":quote,"receipt":receipt}))
         .map_err(internal)?;
@@ -744,7 +749,7 @@ async fn save_decision(
         decided_at,
         snapshot_hash,
     };
-    let public = public_quote(state, quote).await?;
+    let public = public_quote(state, quote, true).await?;
     Ok(ReceiptResponse {
         receipt,
         quote: public,
@@ -770,7 +775,7 @@ async fn receipt_response(state: &AppState, id: &str) -> ApiResult<ReceiptRespon
     let row=sqlx::query_as::<_,QuoteRow>("SELECT id,public_token,creator_name,business_name,quote_number,client_name,currency,summary,items_json,subtotal,tax,total,consent_text,created_at,expires_at,demo_workspace FROM quotes WHERE id=? AND deleted_at IS NULL").bind(&receipt.quote_id).fetch_optional(&state.db).await.map_err(internal)?.ok_or_else(||fail(StatusCode::NOT_FOUND,"The quote for this receipt was deleted."))?;
     Ok(ReceiptResponse {
         pdf_path: format!("/api/receipts/{id}/pdf"),
-        quote: public_quote(state, row).await?,
+        quote: public_quote(state, row, true).await?,
         receipt,
     })
 }
@@ -1059,6 +1064,7 @@ mod tests {
                 created_at: "now".into(),
                 expires_at: "later".into(),
                 decided: true,
+                receipt_id: Some("r".into()),
                 demo: false,
             },
             pdf_path: "x".into(),

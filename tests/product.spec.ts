@@ -72,6 +72,36 @@ test('@claim:record-control owner can export and delete a record', async ({ requ
   expect((await request.get(`/api/share/${made.public_token}`, { headers })).status()).toBe(404);
 });
 
+test('@regression:owner-receipt-link a fresh sender context can open the receipt and download its PDF', async ({ browser, request }) => {
+  const made = await createQuote(request, '198.51.100.61');
+  const decision = await request.post(`/api/share/${made.public_token}/decision`, {
+    headers: { 'x-forwarded-for': '198.51.100.62' },
+    data: { name: 'Mara Chen', title: 'Director', decision: 'approved', consent: true },
+  });
+  expect(decision.status()).toBe(201);
+  const receipt = await decision.json();
+  const publicQuote = await request.get(`/api/share/${made.public_token}`);
+  expect((await publicQuote.json()).receipt_id).toBeNull();
+  const ownedQuote = await request.get(`/api/quotes/${made.id}`, { headers: { 'x-owner-token': made.owner_token } });
+  expect((await ownedQuote.json()).receipt_id).toBe(receipt.receipt.id);
+
+  const sender = await browser.newContext();
+  const page = await sender.newPage();
+  await page.goto('/');
+  await page.evaluate(({ id, ownerToken }) => localStorage.setItem(`owner:${id}`, ownerToken), {
+    id: made.id,
+    ownerToken: made.owner_token,
+  });
+  await page.goto(`/manage/${made.id}`);
+  await expect(page.getByRole('heading', { name: 'A decision is recorded' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'View decision receipt' })).toHaveAttribute('href', `/receipt/${receipt.receipt.id}`);
+  const pdf = page.getByRole('link', { name: 'Download PDF receipt' });
+  await expect(pdf).toHaveAttribute('href', receipt.pdf_path);
+  const [download] = await Promise.all([page.waitForEvent('download'), pdf.click()]);
+  expect(download.suggestedFilename()).toBe('approval-receipt.pdf');
+  await sender.close();
+});
+
 test('@claim:first-party-only the landing and demo load only same-origin resources', async ({ page }) => {
   const external: string[] = [];
   page.on('request', req => { if (new URL(req.url()).origin !== 'http://127.0.0.1:4173') external.push(req.url()); });

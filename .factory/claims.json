@@ -61,5 +61,19 @@
     "where": "README",
     "test": "npm test -- --grep @claim:rate-limits",
     "sandbox": "send a 20-request write burst and assert 429 plus Retry-After"
+  },
+  {
+    "id": "runtime-contract",
+    "claim": "The non-root container starts with only PORT, creates a random privacy salt on first boot, and health reports its build identity.",
+    "where": "README run and deploy sections",
+    "test": "npm run test:runtime-contract",
+    "sandbox": "build the release binary; start it from a clean temporary directory with only PORT; assert health and the generated salt, then inspect the image contract"
+  },
+  {
+    "id": "durable-snapshot",
+    "claim": "A committed record is restored from the configured durable state directory after a replacement process starts.",
+    "where": "README deploy section",
+    "test": "npm run test:durable-snapshot",
+    "sandbox": "create a demo with one process and durable directory; start a second process with a different local directory and assert the record is readable"
   }
 ]
