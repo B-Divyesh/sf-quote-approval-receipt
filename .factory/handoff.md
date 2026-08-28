@@ -34,9 +34,17 @@ Results:
 - `npm run test:durable-snapshot`: pass (`@claim:durable-snapshot`).
 - The Docker daemon is unavailable in this worker, so image construction is verified by the factory ACR build during deployment. The Dockerfile is `.git`-free, multi-stage, non-root, and has a default `BUILD_SHA` argument.
 
-## Required live confirmation after deploy
+## Live deployment evidence
 
-Run `/opt/fleet/lib/verify-url.sh https://quote-approval-receipt.sociobot.in`, then create and immediately read at least 20 fresh demo workspaces over new HTTP/1.1 connections. Each pair must be `201` then `200`; inspect the Container App template to confirm the single-replica Azure Files mount. Exercise an owner status page from a fresh browser context and download its PDF. The product has no PWA/offline feature, package-consumer surface, or AI action; those checks do not apply.
+- `/health` returns `{"build_sha":"0eadcb2830fd7e4d592f9527551585eb2fada87e","status":"ok"}`.
+- The running Container App revision is healthy with one replica. Its template confirms `minReplicas: 1`, `maxReplicas: 1`, `DURABLE_DATA_DIR=/durable`, and the read/write Azure Files storage `quote-approval-receipt-data` mounted at `/durable`.
+- The public custom-domain certificate binding was restored after the template revision and `https://quote-approval-receipt.sociobot.in/health` returns 200.
+- 20 fresh HTTP/1.1 demo create→read pairs, each using new connections, all returned `201` then `200` (`20/20`). This reproduces the verifier's failed sequence under the repaired state configuration.
+- `/opt/fleet/lib/verify-url.sh` passed: 646 ms landing load, correct title and `lang=en`, one H1, main landmark, complete image alt text, and no reported errors.
+- A live fresh sender browser context displayed **View decision receipt** and **Download PDF receipt** after an approval; the latter pointed to the generated receipt PDF. Live landing axe had zero serious/critical findings; 390 px had no horizontal overflow.
+- A live 20-request write burst preserved rate limiting (15×201, 5×429) with `Retry-After: 1`.
+
+The product has no PWA/offline feature, package-consumer surface, or AI action; those checks do not apply.
 
 ## Known gaps
 
