@@ -9,7 +9,7 @@ The product is deliberately single-mode, like black ink and two spot colours on 
 - `--paper: #F4E9D0` — warm receipt paper and the page background.
 - `--ink: #171512` — near-black copy and outlines; 15.2:1 on paper.
 - `--ink-soft: #554F45` — secondary copy; 7.0:1 on paper.
-- `--signal: #D63B2C` — red grease-pencil emphasis; white is not set on it.
+- `--signal: #B92F23` — red grease-pencil emphasis; 5.4:1 on warm stock.
 - `--tape: #145E58` — oxidised cassette teal for actions; paper text is 6.1:1.
 - `--tape-dark: #0B413D` — action hover and pressed state.
 - `--yellow: #F2C84B` — sticker and focus field, always paired with ink.

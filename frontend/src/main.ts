@@ -7,7 +7,7 @@ const SLUG = 'quote-approval-receipt';
 const BILLING = `https://api.sociobot.in/api/v1/products/${SLUG}`;
 const money = (n: number, currency = 'USD') => new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(n);
 const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]!));
-const formatDate = (value: string) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short', timeZoneName: 'short' }).format(new Date(value));
+const formatDate = (value: string) => new Intl.DateTimeFormat(undefined, { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', timeZoneName:'short' }).format(new Date(value));
 
 type LineItem = { description: string; quantity: number; rate: number };
 type Quote = { id:string; creator_name:string; business_name:string; quote_number:string; client_name:string; currency:string; summary:string; items:LineItem[]; subtotal:number; tax:number; total:number; consent_text:string; created_at:string; expires_at:string; decided:boolean; demo:boolean };
