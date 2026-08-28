@@ -1,42 +1,33 @@
-# Handoff — Quote Approval Receipt v1
+# Independent QA handoff — FAIL
 
-## What shipped
+Candidate `85c381d3cf4cda5c68a05a8e0ec26f9b203391bd` was independently verified on 2026-08-28 against <https://quote-approval-receipt.sociobot.in>.
 
-- Rust 2021 `axum` service with SQLite persistence, structured logs, graceful shutdown, `/health`, generated first-boot privacy salt, hourly retention cleanup, and request limits keyed from the first `X-Forwarded-For` hop.
-- Quote creation for an existing scope, line items, totals, sender, client, configurable consent text, and retention choice.
-- Unguessable approval links. A client supplies their name and title, then approves or requests changes. Each quote accepts one final decision.
-- Timestamped receipt pages and downloadable PDF receipts. Each receipt includes the quote, decision maker, consent copy, decision time, and SHA-256 snapshot hash.
-- Browser-held owner keys for record status, JSON export, and permanent deletion.
-- Isolated 24-hour demo workspaces at `/demo`, seeded with a Northstar Studio quote. The demo is resettable and does not write browser owner keys.
-- $29 one-time Studio UI, hosted Sociobot checkout link, license return capture, daily verification cache, and paste-to-restore flow. A valid cached license exposes 365-day retention; free use provides 30 days.
-- Cassette-era zine design, original generated hero art, responsive 390 px layout, keyboard-native controls, reduced-motion behavior, designed loading/error/empty states, `/privacy`, `/terms`, and a styled 404 route.
-- Complete metadata, social card, favicon, sitemap, robots rules, CSP and other response headers, plus `noindex` headers for approval and receipt paths.
+**Release verdict: FAIL. Do not promote this candidate.**
 
-## How to run
+## Blocking evidence
 
-```sh
-npm install
-npm run build
-PORT=8080 cargo run
-```
+- The deployment reports the candidate SHA and serves byte-identical HTML/JS/CSS, but SQLite state is isolated across replicas. A normal record alternated `404, 200` on repeated reads; the demo produced 0 usable reads in 16 fresh create/read attempts. The demo and real workflow are unreliable.
+- The advertised Studio checkout returns HTTP 404.
+- The backend grants 365-day retention without license proof.
+- PDF receipts strip non-ASCII identity characters: `José Núñez — Direção` became `Jos Nez  Direo`.
+- Public and README claims are missing from `.factory/claims.json`; Studio and PDF tests do not prove their advertised outcomes.
 
-The container build is `docker build --build-arg BUILD_SHA=<sha> .`. It starts as a non-root user and needs only `PORT`; mount `/data` for persistence.
+Additional defects: invalid currency can leave approval pages stuck with a page error; 200% text causes mobile overflow; several targets are under 44×44 px; private API responses lack `no-store`; static cache/compression policy is missing.
 
-## Verification
+Full commands, allowances, hashes, performance, accessibility, privacy, boundary, and severity evidence are in [`.factory/verification.md`](verification.md).
 
-- `npm test`: passed. Two Rust unit tests and nine Playwright checks passed, including all five claim tests, the 390 px project, and axe serious/critical checks.
-- `cargo fmt --check`: passed.
-- `cargo clippy --all-targets -- -D warnings`: passed.
-- `cargo build --release`: passed.
-- `npm audit`: 0 vulnerabilities.
-- `verify-url.sh`: passed against the release binary; one `<h1>`, `lang`, main landmark and alt text present, with no console errors. Measured load was 571 ms on the local runner.
-- Lighthouse mobile: Performance 100, Accessibility 100, Best Practices 100, SEO 100. LCP 1.8 s, CLS 0, total blocking time 0 ms.
-- Production bundle: 8.56 KB gzipped JavaScript, 4.05 KB gzipped CSS. Hero WebP: 104 KB.
-- Load smoke: 100 concurrent health requests completed in 402 ms on the local runner.
-- Deep links return 200. Approval pages return `X-Robots-Tag: noindex, nofollow, noarchive`.
+## What passed
 
-## Known gaps and next steps
+- Every declared claim command passed locally when run first.
+- `npm ci`, `npm test` (2 Rust + 9 Playwright), TypeScript, format, Clippy with warnings denied, release build, and audit passed.
+- Local restart persistence, concurrent-decision conflict handling, export/delete, security headers, same-origin requests, normal 390 px layout, keyboard focus, reduced motion, and axe serious/critical checks passed.
+- Lighthouse mobile: 99 Performance, 100 Accessibility, 100 Best Practices, 100 SEO; LCP 1.7 s, CLS 0.
+- Rate limits: product GET 40/s and write 15/s with `Retry-After: 1`; billing verify burst 30 with `Retry-After: 4`.
 
-- The factory must register the paid product and confirm its $29 price before release. No product ID is hardcoded.
-- A container engine was not installed in the worker, so the Dockerfile was reviewed but not executed. Both stages were verified independently with `npm run build` and `cargo build --release`.
-- This product intentionally does not claim signature-law compliance, write proposals, collect payment, or authenticate user accounts.
+## Reproduce the primary failure
+
+1. Open <https://quote-approval-receipt.sociobot.in> in a fresh browser.
+2. Select **Try it with sample data**.
+3. Observe **The demo could not start** after create succeeds and the new share read returns 404.
+
+Before re-verification, move records to shared durable storage, enable the Sociobot checkout, enforce Studio server-side, preserve Unicode in PDFs, and repair claims coverage. No product code was modified during verification.
