@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /approve/
+Disallow: /receipt/
+Disallow: /manage/
+Disallow: /api/
+Sitemap: https://quote-approval-receipt.sociobot.in/sitemap.xml

@@ -1,0 +1,9 @@
+.git
+node_modules
+target
+dist
+.test-data
+test-report
+test-results
+assets/src
+.env*
