@@ -50,7 +50,7 @@ Free links retain records for 30 days. A 365-day request succeeds only after the
 
 ## Deploy
 
-Build the root `Dockerfile` and mount persistent storage at `/data`. SQLite deployments must use one replica because the database is a single-writer file. The image runs as a non-root user and needs only `PORT`. The factory owns deployment, DNS, billing registration, and the production build SHA.
+Build the root `Dockerfile` and mount persistent storage at `/data`. Set `DURABLE_DATA_DIR=/data` and keep one replica. The service runs SQLite on local disk and atomically snapshots each committed change to the mounted volume. The image runs as a non-root user and needs only `PORT`; durable storage is an optional deployment override. The factory owns deployment, DNS, billing registration, and the production build SHA.
 
 ## License
 

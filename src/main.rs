@@ -33,6 +33,9 @@ const BUILD_SHA: &str = env!("BUILD_SHA", "dev");
 #[derive(Clone)]
 struct AppState {
     db: SqlitePool,
+    db_path: PathBuf,
+    durable_db: Option<PathBuf>,
+    persist_lock: Arc<Mutex<()>>,
     privacy_salt: Arc<Vec<u8>>,
     limiter: Arc<Mutex<HashMap<String, VecDeque<Instant>>>>,
     billing_base: String,
@@ -199,11 +202,26 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| PathBuf::from("data"));
     fs::create_dir_all(&data_dir).await?;
     let db_path = data_dir.join("quotes.sqlite3");
-    let database_url = env::var("DATABASE_URL")
-        .unwrap_or_else(|_| format!("sqlite://{}?mode=rwc", db_path.display()));
-    let salt_path = data_dir.join("privacy_salt");
+    let database_override = env::var("DATABASE_URL").ok();
+    let durable_dir = env::var("DURABLE_DATA_DIR").ok().map(PathBuf::from);
+    if let Some(directory) = &durable_dir {
+        fs::create_dir_all(directory).await?;
+    }
+    let durable_db = database_override
+        .is_none()
+        .then(|| durable_dir.as_ref().map(|dir| dir.join("quotes.sqlite3")))
+        .flatten();
+    if let Some(source) = durable_db.as_ref().filter(|path| path.exists()) {
+        fs::copy(source, &db_path).await?;
+    }
+    let database_url =
+        database_override.unwrap_or_else(|| format!("sqlite://{}?mode=rwc", db_path.display()));
+    let salt_path = durable_dir
+        .as_ref()
+        .unwrap_or(&data_dir)
+        .join("privacy_salt");
     let (salt, generated) = load_or_create_salt(&salt_path).await?;
-    info!(database = %db_path.display(), privacy_salt = if generated { "generated" } else { "persisted" }, build_sha = BUILD_SHA, "configuration ready");
+    info!(database = %db_path.display(), durable_snapshot = durable_db.as_ref().map(|p| p.display().to_string()), privacy_salt = if generated { "generated" } else { "persisted" }, build_sha = BUILD_SHA, "configuration ready");
 
     let db = SqlitePoolOptions::new()
         // This service deliberately deploys as one replica with one SQLite
@@ -215,6 +233,9 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     cleanup_expired(&db).await?;
     let state = AppState {
         db,
+        db_path,
+        durable_db,
+        persist_lock: Arc::new(Mutex::new(())),
         privacy_salt: Arc::new(salt),
         limiter: Arc::new(Mutex::new(HashMap::new())),
         billing_base: env::var("BILLING_BASE_URL").unwrap_or_else(|_| {
@@ -224,13 +245,16 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
             .timeout(StdDuration::from_secs(8))
             .build()?,
     };
-    let cleanup_db = state.db.clone();
+    persist_database(&state).await?;
+    let cleanup_state = state.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(StdDuration::from_secs(3600));
         loop {
             interval.tick().await;
-            if let Err(error) = cleanup_expired(&cleanup_db).await {
+            if let Err(error) = cleanup_expired(&cleanup_state.db).await {
                 warn!(%error, "expired-record cleanup failed");
+            } else if let Err(error) = persist_database(&cleanup_state).await {
+                warn!(%error, "durable database snapshot failed");
             }
         }
     });
@@ -317,6 +341,16 @@ async fn cleanup_expired(db: &SqlitePool) -> Result<(), sqlx::Error> {
         .execute(db)
         .await?;
     Ok(())
+}
+
+async fn persist_database(state: &AppState) -> std::io::Result<()> {
+    let Some(destination) = &state.durable_db else {
+        return Ok(());
+    };
+    let _guard = state.persist_lock.lock().await;
+    let temporary = destination.with_extension("sqlite3.next");
+    fs::copy(&state.db_path, &temporary).await?;
+    fs::rename(temporary, destination).await
 }
 
 async fn health() -> Json<serde_json::Value> {
@@ -479,6 +513,7 @@ async fn insert_quote(
       .bind(subtotal).bind(tax).bind(subtotal + tax).bind(clean(&input.consent_text,"Consent text",12,500)?)
       .bind(created.to_rfc3339()).bind(expires.to_rfc3339()).bind(&demo_workspace)
       .execute(&state.db).await.map_err(internal)?;
+    persist_database(state).await.map_err(internal)?;
     Ok(CreatedQuote {
         id,
         public_token: public_token.clone(),
@@ -615,6 +650,7 @@ async fn delete_quote(
         .execute(&state.db)
         .await
         .map_err(internal)?;
+    persist_database(&state).await.map_err(internal)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -692,6 +728,7 @@ async fn save_decision(
     sqlx::query("INSERT INTO decisions (id,quote_id,approver_name,approver_title,approver_email,decision,note,consent_text,decided_at,snapshot_hash,ip_hash,user_agent) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
       .bind(&id).bind(&quote.id).bind(&name).bind(&title).bind(&email).bind(&input.decision).bind(&note).bind(&quote.consent_text).bind(&decided_at).bind(&snapshot_hash).bind(ip_hash).bind(ua)
       .execute(&state.db).await.map_err(|e| if e.to_string().contains("UNIQUE") { fail(StatusCode::CONFLICT,"A decision has already been recorded for this quote.") } else { internal(e) })?;
+    persist_database(state).await.map_err(internal)?;
     let receipt = ReceiptRow {
         id: id.clone(),
         quote_id: quote.id.clone(),
@@ -1066,6 +1103,9 @@ mod tests {
         migrate(&db).await.expect("database migration");
         let state = AppState {
             db,
+            db_path: directory.path().join("quotes.sqlite3"),
+            durable_db: None,
+            persist_lock: Arc::new(Mutex::new(())),
             privacy_salt: Arc::new(vec![1; 32]),
             limiter: Arc::new(Mutex::new(HashMap::new())),
             billing_base: format!("http://{address}"),
@@ -1091,5 +1131,49 @@ mod tests {
             .expect_err("missing license must fail");
         assert_eq!(error.0, StatusCode::FORBIDDEN);
         mock.abort();
+    }
+
+    #[tokio::test]
+    async fn durable_snapshot_restores_a_committed_record() {
+        let directory = tempfile::tempdir().expect("temporary storage");
+        let local = directory.path().join("local.sqlite3");
+        let durable = directory.path().join("durable.sqlite3");
+        let db = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&format!("sqlite://{}?mode=rwc", local.display()))
+            .await
+            .expect("database connection");
+        migrate(&db).await.expect("database migration");
+        let state = AppState {
+            db,
+            db_path: local.clone(),
+            durable_db: Some(durable.clone()),
+            persist_lock: Arc::new(Mutex::new(())),
+            privacy_salt: Arc::new(vec![2; 32]),
+            limiter: Arc::new(Mutex::new(HashMap::new())),
+            billing_base: "http://127.0.0.1:1".into(),
+            http: reqwest::Client::new(),
+        };
+        let created = insert_quote(&state, demo_quote(), Some("durable-demo".into()))
+            .await
+            .expect("record creation");
+        state.db.close().await;
+        fs::copy(&durable, directory.path().join("restored.sqlite3"))
+            .await
+            .expect("restore snapshot");
+        let restored = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect(&format!(
+                "sqlite://{}?mode=rw",
+                directory.path().join("restored.sqlite3").display()
+            ))
+            .await
+            .expect("restored connection");
+        let count = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM quotes WHERE id=?")
+            .bind(created.id)
+            .fetch_one(&restored)
+            .await
+            .expect("restored query");
+        assert_eq!(count, 1);
     }
 }
