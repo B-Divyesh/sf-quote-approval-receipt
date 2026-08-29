@@ -4,7 +4,7 @@
       "containers": [
         {
           "name": "app",
-          "image": "sociobotregistry.azurecr.io/sf-quote-approval-receipt:3222faf",
+          "image": "sociobotregistry.azurecr.io/sf-quote-approval-receipt:0d501ac",
           "env": [
             { "name": "PORT", "value": "8080" },
             { "name": "DURABLE_DATA_DIR", "value": "/durable" }
