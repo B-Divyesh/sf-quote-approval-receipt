@@ -1,38 +1,23 @@
-# Polish round 4 handoff
+# Verification 8 handoff — FAIL
 
-- Work order: `quote-approval-receipt-polish-4`
-- Repair commit: `cfac15d79d708086b8324d8ca2902defe96c4c50`
+- Work order: `quote-approval-receipt-verify-8`
+- Candidate: `327aa1551253196d9cf6e85db5b94acebaafd57a`
 - Live URL: <https://quote-approval-receipt.sociobot.in>
-- Deployed revision: `sf-quote-approval-receipt--polish4`
-- Image: `sociobotregistry.azurecr.io/sf-quote-approval-receipt:repair-8`
+- Active revision/image: `sf-quote-approval-receipt--0000026` / `sociobotregistry.azurecr.io/sf-quote-approval-receipt:327aa1551253`
+- **Release decision: FAIL. Do not release.**
 
-## What changed
+## What was verified
 
-- Removed the final unlisted, untestable README assertion that one replica makes the 15-write allowance global.
-- Removed the matching assertion from the operator deployment guide and added a manifest-gate regression that rejects both phrases.
-- Updated the catalog sentence to `Record quote approvals and issue a named, timestamped PDF receipt.`
-- Reapplied the declared one-replica Azure Files deployment contract. Existing product repairs remain present: isolated one-click demo, reset/exit deletion, fixed quote/PDF workflow, sender receipt access, metadata/routing/404, mobile layout, and literal copy.
+- Clean-install claims: all 13 commands in `.factory/claims.json` passed individually; unfiltered `npm test` passed (4 Rust + 20 Playwright tests).
+- `npm run check`, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `npm audit --audit-level=high`, and `npm run build` passed. Production frontend bundles are 8.96 kB gzip JS and 4.20 kB gzip CSS.
+- The cold live page passes the plain-words/one-click demo gate, candidate SHA matches `/health`, normal demo approval and PDF flow works in a single browser session, privacy request logging remained same-origin, and desktop/mobile axe, keyboard focus, reduced-motion, headers and caching checks passed.
 
-## Verification
+## Blocking deployed defect
 
-- Clean GitHub clone at `cfac15d79d708086b8324d8ca2902defe96c4c50`: `npm ci` had zero vulnerabilities; every command in `.factory/claims.json` passed individually.
-- `npm test` passed: 4 Rust tests and 20 Playwright tests. `npm run build`, `npm run check`, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `npm audit --audit-level=high` passed.
-- ACR build `chwu` succeeded from a `.git`-excluded source archive. The deployed health response is `{"build_sha":"cfac15d79d708086b8324d8ca2902defe96c4c50","durable_snapshot":true,"status":"ok"}`.
-- Live: `test:live-topology` passed; `test:live-demo` completed 20/20 fresh-process create `201` → read `200` → cleanup `404` cycles; `test:live-rate-limit` observed 15 writes then a `429` with `Retry-After: 1`; `test:live-review` passed all checked routes with zero serious/critical Axe violations.
-- `verify-url.sh` passed with no console errors, one H1, `lang=en`, main landmark, and complete image alt text. Lighthouse scored 100 Performance, 100 Accessibility, 100 Best Practices, and 100 SEO; LCP 0.1 s, TBT 0 ms, CLS 0.
-- Evidence and screenshots are in `.factory/evidence/polish-4/`; the finding-by-finding receipt is [`.factory/polish-4.md`](polish-4.md).
+The active candidate deployment does **not** match the committed durable-state contract. Azure reports `maxReplicas: 3`, only `PORT` in environment, and no durable volume/mount. `/health` reports `durable_snapshot: false`.
 
-## Run and deploy
+This is reproducible user-visible breakage: `test:live-demo` creates a demo (`201`) then cannot read its share token (`404`); `test:live-review` cannot load the just-created sample; `test:live-rate-limit` sees the documented 15-write/429 admission result but its cleanup reaches another replica and gets `404`; and `test:live-topology` fails because max replicas are 3 rather than 1. SQLite records can therefore be split between replicas and are not persisted to the required Azure Files snapshot.
 
-```sh
-npm ci
-npm test
-npm run build
-PORT=8080 cargo run
-```
+## Next step
 
-The container starts with only `PORT`; production uses one replica with the `/durable` Azure Files mount and `DURABLE_DATA_DIR=/durable`.
-
-## Known gaps
-
-None.
+Redeploy with one replica, Azure Files `quote-approval-receipt-data` mounted at `/durable`, and `DURABLE_DATA_DIR=/durable`. Verify `/health` says `durable_snapshot: true`, then rerun the four live scripts. Full evidence and commands are in `.factory/verification-8.md`.
