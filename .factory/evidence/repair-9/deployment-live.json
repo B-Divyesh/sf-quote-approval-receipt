@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-08-29T14:29:00Z",
+  "revision": "sf-quote-approval-receipt--0000033",
+  "ready_revision": "sf-quote-approval-receipt--0000033",
+  "active_revisions": 1,
+  "ready_replicas": 1,
+  "traffic_percent": 100,
+  "image": "sociobotregistry.azurecr.io/sf-quote-approval-receipt:d71f61a81007",
+  "image_digest": "sha256:44b3f8fce21f811548fdc4a339a7b76e16221e8ac2b20da9bedca0073ad233f3",
+  "acr_run": "ch12h",
+  "environment": [
+    { "name": "PORT", "value": "8080" },
+    { "name": "DURABLE_DATA_DIR", "value": "/durable" }
+  ],
+  "mounts": [
+    { "volumeName": "durable", "mountPath": "/durable" }
+  ],
+  "scale": { "minReplicas": 1, "maxReplicas": 1 },
+  "volumes": [
+    { "name": "durable", "storageType": "AzureFile", "storageName": "quote-approval-receipt-data" }
+  ]
+}
