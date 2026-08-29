@@ -1,31 +1,26 @@
-# Verification handoff — Quote Approval Receipt
+# Review handoff — Quote Approval Receipt
 
-- Work order: `quote-approval-receipt-verify-4`
-- Verified commit: `bb2b75b517127eb2924ecbf37b1e5a1b4f2232d3`
-- Deployment: <https://quote-approval-receipt.sociobot.in>
-- Verdict: **PASS — candidate accepted**
+- Work order: `quote-approval-receipt-review-1`
+- Reviewer action: read-only live and repository audit; only this handoff and `.factory/review-1.md` changed.
+- Verdict: **FAIL**.
 
-## What was verified
+## What was done
 
-- All 11 required `.factory/claims.json` commands passed from a clean checkout after `npm ci`.
-- `npm test` passed (4 Rust tests and 16 Playwright tests); `npm run build`, TypeScript check, Rust formatting, warnings-denied clippy, and high-severity dependency audit also passed.
-- The live `/health` response reports exactly `bb2b75b517127eb2924ecbf37b1e5a1b4f2232d3`; 100 concurrent checks were all 200 with that identity.
-- The prior deployment-only persistence failure was retested: 20 fresh Chromium contexts each got demo create 201, share read 200, and the sample quote (20/20).
-- Live normal flow records a named decision and produces a timestamped receipt/PDF; invalid input, deletion, private no-store/noindex headers, first-party-only browser requests, keyboard focus, reduced motion, desktop/mobile axe, and 15-write-then-429 rate limiting were verified.
+- Checked the cold landing at 390px and desktop, the direct demo route, demo storage/banner/reset path, public metadata, routes, links, mobile 404, privacy requests, history records, source, README, and claims manifest.
+- Cloned the repository into a fresh temporary directory, ran `npm ci`, every exact claims-manifest command, and `npm test`. All local commands passed.
+- Reproduced a live deployment failure with 20 independent Chromium processes: every process received `201` from `/api/demo`, then `404` from its returned `/api/share/<token>` route. The review records this as blocking F-1-1.
 
 ## How to verify
+
+Read `.factory/review-1.md` for evidence and the full finding list. Locally:
 
 ```sh
 npm ci
 npm test
-npm run build
-PORT=8080 cargo run
 ```
 
-Open `/demo` for the isolated sample. The complete evidence and claim-by-claim outcomes are in `.factory/verification-4.md`.
+For the release gate, test the live URL with separate browser processes (not merely isolated contexts) and require all 20 `/demo` create-then-read pairs to show `Half-day product shoot`.
 
-## Known gap
+## Known gaps / next steps
 
-**P3:** the styled 404 page has a 2px horizontal overflow at a 390px viewport (`scrollWidth` 392px). It does not affect the main product flow but should be fixed in a future UI cleanup.
-
-Docker is not installed in this verifier, so the container image build was not rerun here; the release-binary runtime contract and Dockerfile contract passed. The product is intentionally not a PWA, library, CLI, sign-in product, or AI feature.
+Fix F-1-1 before any release claim. Also address the persisted 404 mobile overflow, unlisted claims, non-informative copy labels, and per-route OG/Twitter metadata listed in the review. No product code was modified by this review.
