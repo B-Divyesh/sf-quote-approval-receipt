@@ -1,0 +1,24 @@
+{
+  "properties": {
+    "template": {
+      "containers": [
+        {
+          "name": "app",
+          "image": "sociobotregistry.azurecr.io/sf-quote-approval-receipt:3222faf",
+          "env": [
+            { "name": "PORT", "value": "8080" },
+            { "name": "DURABLE_DATA_DIR", "value": "/durable" }
+          ],
+          "resources": { "cpu": 0.5, "memory": "1Gi", "ephemeralStorage": "2Gi" },
+          "volumeMounts": [
+            { "volumeName": "durable", "mountPath": "/durable" }
+          ]
+        }
+      ],
+      "scale": { "minReplicas": 1, "maxReplicas": 1, "pollingInterval": 30, "cooldownPeriod": 300 },
+      "volumes": [
+        { "name": "durable", "storageType": "AzureFile", "storageName": "quote-approval-receipt-data" }
+      ]
+    }
+  }
+}
