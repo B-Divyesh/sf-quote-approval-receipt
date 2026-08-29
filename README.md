@@ -42,13 +42,15 @@ The container listens on `PORT` (default `8080`). It starts with no required con
 
 Each real quote gets independent random approval and owner tokens. The owner token stays in that browser and authorizes export or deletion. Private pages and API responses use `noindex` and `no-store` response policies.
 
-Each fixed quote accepts one final decision. API write bursts return `429` with `Retry-After` when they exceed the limit.
+Each fixed quote accepts one final decision. API read and write bursts return `429` with `Retry-After` when they exceed the limit.
 
 Free links retain records for 30 days. A 365-day request succeeds only after the backend verifies a Studio license with Sociobot. A $29 Studio checkout on Sociobot appears only when the product is available. License holders can enter a license.
 
 ## Deploy
 
 Build the root `Dockerfile`. The image runs as the non-root `app` user and needs only `PORT` to start. The factory Container Apps release is a strict one-replica service: its dedicated Azure Files share is mounted at `/durable` and `DURABLE_DATA_DIR=/durable`. The service writes a durable snapshot after each committed change, so a replacement process restores records before serving traffic. Durable storage is an optional deployment override for local use. The factory owns deployment, DNS, billing registration, and the production build SHA.
+
+Apply `.factory/containerapp-deploy.json` for production. After deployment, run the live topology, real workflow, 20-demo, rate-limit, and review scripts listed in `package.json`. The topology check fails unless the active revision has one ready replica and mounted durable state.
 
 ## License
 

@@ -232,7 +232,16 @@ test('@claim:network-address-privacy receipts and exports never reveal the netwo
   expect(await exported.text()).not.toContain(address);
 });
 
-test('@claim:rate-limits write endpoints return 429 with Retry-After during a burst', async ({ request }) => {
+test('@claim:rate-limits read and write endpoints return 429 with Retry-After during bursts', async ({ request }) => {
+  const reads = await Promise.all(Array.from({ length: 41 }, (_, index) => request.get(
+    `/api/share/localRateLimitProbe${String(index).padStart(2, '0')}`,
+    { headers: { 'x-forwarded-for': '198.51.100.76' } },
+  )));
+  expect(reads.filter(response => response.status() === 404)).toHaveLength(40);
+  const limitedReads = reads.filter(response => response.status() === 429);
+  expect(limitedReads).toHaveLength(1);
+  expect(limitedReads[0].headers()['retry-after']).toBe('1');
+
   const statuses: number[] = []; let retry = '';
   for (let i=0;i<16;i++) {
     const response=await request.post('/api/demo',{headers:{'x-forwarded-for':'203.0.113.77'}});

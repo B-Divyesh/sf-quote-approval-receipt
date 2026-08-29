@@ -71,10 +71,10 @@
   },
   {
     "id": "rate-limits",
-    "claim": "API write bursts are rate limited with retry guidance.",
+    "claim": "API read and write bursts are rate limited with retry guidance.",
     "where": "README",
     "test": "npm test -- --grep @claim:rate-limits",
-    "sandbox": "send a 20-request write burst and assert 429 plus Retry-After"
+    "sandbox": "send 41 concurrent reads and a 16-request write burst; assert the 40-read and 15-write allowances, 429, and Retry-After"
   },
   {
     "id": "runtime-contract",

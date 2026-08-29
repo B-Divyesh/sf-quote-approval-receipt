@@ -42,7 +42,54 @@ try {
   const readElsewhere = await fetch(`http://127.0.0.1:${second.port}/api/share/${quote.public_token}`);
   assert.equal(readElsewhere.status, 404,
     'separate replica-local SQLite files reproduce the failed 201 then 404 production path');
-  console.log('@regression:replica-local-split unsafe two-replica local SQLite reproduces create 201 then read 404');
+
+  // Model a load balancer sending one client's requests evenly to both
+  // replicas. Each process-local bucket admits a full allowance.
+  const readIp = '198.51.100.240';
+  const readResponses = [];
+  for (let index = 0; index < 40; index += 1) {
+    readResponses.push(await fetch(`http://127.0.0.1:${first.port}/api/share/missing`, {
+      headers: { 'x-forwarded-for': readIp },
+    }));
+    readResponses.push(await fetch(`http://127.0.0.1:${second.port}/api/share/missing`, {
+      headers: { 'x-forwarded-for': readIp },
+    }));
+  }
+  assert.equal(readResponses.filter(response => response.status === 404).length, 80,
+    'two local buckets incorrectly admit 80 reads for one client');
+  for (const replica of [first, second]) {
+    const limited = await fetch(`http://127.0.0.1:${replica.port}/api/share/missing`, {
+      headers: { 'x-forwarded-for': readIp },
+    });
+    assert.equal(limited.status, 429);
+    assert.equal(limited.headers.get('retry-after'), '1');
+  }
+
+  const writeIp = '203.0.113.240';
+  const invalidBody = JSON.stringify({});
+  const writeResponses = [];
+  for (let index = 0; index < 15; index += 1) {
+    for (const replica of [first, second]) {
+      writeResponses.push(await fetch(`http://127.0.0.1:${replica.port}/api/quotes`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-forwarded-for': writeIp },
+        body: invalidBody,
+      }));
+    }
+  }
+  assert.equal(writeResponses.filter(response => response.status === 422).length, 30,
+    'two local buckets incorrectly admit 30 writes for one client');
+  for (const replica of [first, second]) {
+    const limited = await fetch(`http://127.0.0.1:${replica.port}/api/quotes`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': writeIp },
+      body: invalidBody,
+    });
+    assert.equal(limited.status, 429);
+    assert.equal(limited.headers.get('retry-after'), '1');
+  }
+
+  console.log('@regression:replica-local-split unsafe two-replica local state reproduces create 201/read 404 and doubles allowances to 80 reads/30 writes');
 } finally {
   if (first) await stop(first.child);
   if (second) await stop(second.child);
