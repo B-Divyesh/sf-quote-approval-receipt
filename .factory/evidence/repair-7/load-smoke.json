@@ -1,0 +1,9 @@
+{
+  "url": "https://quote-approval-receipt.sociobot.in/",
+  "rate": "100 requests/second",
+  "duration_seconds": 3,
+  "requests": 300,
+  "status_200": 300,
+  "p95_milliseconds": 293,
+  "maximum_milliseconds": 383
+}

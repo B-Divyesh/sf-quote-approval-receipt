@@ -1,0 +1,22 @@
+{
+  "revision": "sf-quote-approval-receipt--0000029",
+  "ready_revision": "sf-quote-approval-receipt--0000029",
+  "active_revisions": 1,
+  "ready_replicas": 1,
+  "traffic_weight": 100,
+  "image": "sociobotregistry.azurecr.io/sf-quote-approval-receipt:repair-7",
+  "image_digest": "sha256:35fa2b2a4e3bbbc155fc8a5b108eb7e9bd1a6b453b4a135b3a2405cf8963795d",
+  "environment": {
+    "PORT": "8080",
+    "DURABLE_DATA_DIR": "/durable"
+  },
+  "scale": {
+    "minReplicas": 1,
+    "maxReplicas": 1
+  },
+  "volume": {
+    "name": "durable",
+    "storageName": "quote-approval-receipt-data",
+    "mountPath": "/durable"
+  }
+}
