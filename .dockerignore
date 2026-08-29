@@ -5,5 +5,7 @@ dist
 .test-data
 test-report
 test-results
+playwright-report
+.factory/evidence
 assets/src
 .env*

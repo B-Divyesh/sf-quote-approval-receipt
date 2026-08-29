@@ -42,3 +42,5 @@ const dockerfile = await readFile(join(root, 'Dockerfile'), 'utf8');
 assert.match(dockerfile, /^FROM rust:1-slim AS backend$/m);
 assert.match(dockerfile, /^USER app$/m);
 assert.match(dockerfile, /^ENV PORT=8080 DATA_DIR=\/data STATIC_DIR=\/app\/dist$/m);
+const dockerignore = await readFile(join(root, '.dockerignore'), 'utf8');
+assert.match(dockerignore, /^\.git$/m, 'the ACR source context must exclude Git metadata');

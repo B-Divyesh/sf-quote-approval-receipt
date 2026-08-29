@@ -50,7 +50,7 @@ Free links retain records for 30 days. A 365-day request succeeds only after the
 
 Build the root `Dockerfile`. The image runs as the non-root `app` user and needs only `PORT` to start. The factory Container Apps release is a strict one-replica service: its dedicated Azure Files share is mounted at `/durable` and `DURABLE_DATA_DIR=/durable`. The service writes a durable snapshot after each committed change, so a replacement process restores records before serving traffic. Durable storage is an optional deployment override for local use. The factory owns deployment, DNS, billing registration, and the production build SHA.
 
-Apply `.factory/containerapp-deploy.json` for production. After deployment, run the live topology, real workflow, 20-demo, rate-limit, and review scripts listed in `package.json`. The topology check fails unless the active revision has one ready replica and mounted durable state.
+Apply `.factory/containerapp-deploy.json` for production. The factory deployer must render its candidate image into that contract with `node scripts/deployment-contract.mjs <image> 8080`; using its generic three-replica template is unsafe for this SQLite service. After deployment, run the live topology, real workflow, 20-demo, rate-limit, and review scripts listed in `package.json`. The topology check fails unless the active revision has one ready replica and mounted durable state.
 
 ## License
 
