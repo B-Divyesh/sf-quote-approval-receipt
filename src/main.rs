@@ -373,8 +373,15 @@ async fn copy_file_bytes(source: &FsPath, destination: &FsPath) -> std::io::Resu
     fs::rename(temporary, destination).await
 }
 
-async fn health() -> Json<serde_json::Value> {
-    Json(serde_json::json!({"status":"ok","build_sha":BUILD_SHA}))
+async fn health(State(state): State<AppState>) -> Json<serde_json::Value> {
+    // This is deliberately observable: the release check must distinguish a
+    // locally ephemeral process from the one-replica, mounted-durable release
+    // topology that keeps records and the process-wide limiter coherent.
+    Json(serde_json::json!({
+        "status":"ok",
+        "build_sha":BUILD_SHA,
+        "durable_snapshot": state.durable_db.is_some()
+    }))
 }
 
 #[derive(Deserialize)]

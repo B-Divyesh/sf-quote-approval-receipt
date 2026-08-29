@@ -234,8 +234,14 @@ test('@claim:network-address-privacy receipts and exports never reveal the netwo
 
 test('@claim:rate-limits write endpoints return 429 with Retry-After during a burst', async ({ request }) => {
   const statuses: number[] = []; let retry = '';
-  for (let i=0;i<20;i++) { const response=await request.post('/api/demo',{headers:{'x-forwarded-for':'203.0.113.77'}}); statuses.push(response.status()); if(response.status()===429)retry=response.headers()['retry-after']; }
-  expect(statuses).toContain(429); expect(retry).toBe('1');
+  for (let i=0;i<16;i++) {
+    const response=await request.post('/api/demo',{headers:{'x-forwarded-for':'203.0.113.77'}});
+    statuses.push(response.status());
+    if(response.status()===429)retry=response.headers()['retry-after'];
+  }
+  expect(statuses.slice(0, 15)).toEqual(Array(15).fill(201));
+  expect(statuses[15]).toBe(429);
+  expect(retry).toBe('1');
 });
 
 test('invalid currencies fail cleanly and response policies are enforced', async ({ request }) => {

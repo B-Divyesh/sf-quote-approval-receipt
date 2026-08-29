@@ -39,6 +39,8 @@ try {
   assert.ok(template.volumes.some(item => item.name === 'durable' && item.storageName === 'quote-approval-receipt-data'));
 
   const first = await start(join(root, 'local-one'));
+  assert.equal((await (await fetch(`http://127.0.0.1:${first.port}/health`)).json()).durable_snapshot, true,
+    'the mounted durable mode is visible to the release check');
   const tokens = [];
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const create = await fetch(`http://127.0.0.1:${first.port}/api/demo`, {

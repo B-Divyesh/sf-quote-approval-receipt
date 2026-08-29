@@ -28,6 +28,7 @@ try {
   assert.equal(health.status, 'ok');
   assert.equal(typeof health.build_sha, 'string');
   assert.ok(health.build_sha.length > 0);
+  assert.equal(health.durable_snapshot, false, 'the no-config startup remains local-first');
   const salt = await readFile(join(workdir, 'data', 'privacy_salt'));
   assert.ok(salt.length >= 32, 'first boot creates a random privacy salt');
   console.log('@claim:runtime-contract only PORT starts the service; health exposes build identity; first boot creates its salt');

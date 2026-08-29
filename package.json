@@ -12,6 +12,8 @@
     "test:runtime-contract": "cargo build --release && node tests/runtime-contract.mjs",
     "test:durable-snapshot": "cargo build --release && node tests/durable-snapshot.mjs",
     "test:live-demo": "node scripts/live-demo-check.mjs",
+    "test:live-rate-limit": "node scripts/live-rate-limit-check.mjs",
+    "test:live-topology": "node scripts/live-topology-check.mjs",
     "test:live-review": "node scripts/live-review-check.mjs",
     "test:ui": "playwright test",
     "check": "tsc --noEmit"
