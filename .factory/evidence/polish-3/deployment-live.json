@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-08-29T04:14:00Z",
+  "url": "https://quote-approval-receipt.sociobot.in",
+  "revision": "sf-quote-approval-receipt--0000021",
+  "image": "sociobotregistry.azurecr.io/sf-quote-approval-receipt:309f25e5054d",
+  "image_digest": "sha256:7dbdba2a28419064c9daccb031a86bc7556413518558c394bbfd2dad0a579121",
+  "health_build_sha": "309f25e5054d1672dacbf024a573352853b88e9c",
+  "provisioning_state": "Succeeded",
+  "health_state": "Healthy",
+  "active_replicas": 1,
+  "scale": {
+    "min_replicas": 1,
+    "max_replicas": 1
+  },
+  "durable_storage": {
+    "type": "AzureFile",
+    "storage_name": "quote-approval-receipt-data",
+    "volume_name": "durable",
+    "mount_path": "/durable",
+    "environment_variable": "DURABLE_DATA_DIR=/durable"
+  }
+}

@@ -1,0 +1,7 @@
+/ status=200 cache=none robots=none csp=yes
+/new status=200 cache=none robots=none csp=yes
+/privacy status=200 cache=none robots=none csp=yes
+/terms status=200 cache=none robots=none csp=yes
+/missing-review-route status=404 cache=none robots=none csp=yes
+/api/share/not-real status=404 cache=no-store robots=noindex, nofollow, noarchive csp=yes
+/manage/not-real status=200 cache=no-store robots=noindex, nofollow, noarchive csp=yes

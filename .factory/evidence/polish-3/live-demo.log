@@ -1,0 +1,25 @@
+
+> quote-approval-receipt@1.3.0 test:live-demo
+> node scripts/live-demo-check.mjs
+
+attempt 1: create 201, read 200, exit cleanup 404
+attempt 2: create 201, read 200, exit cleanup 404
+attempt 3: create 201, read 200, exit cleanup 404
+attempt 4: create 201, read 200, exit cleanup 404
+attempt 5: create 201, read 200, exit cleanup 404
+attempt 6: create 201, read 200, exit cleanup 404
+attempt 7: create 201, read 200, exit cleanup 404
+attempt 8: create 201, read 200, exit cleanup 404
+attempt 9: create 201, read 200, exit cleanup 404
+attempt 10: create 201, read 200, exit cleanup 404
+attempt 11: create 201, read 200, exit cleanup 404
+attempt 12: create 201, read 200, exit cleanup 404
+attempt 13: create 201, read 200, exit cleanup 404
+attempt 14: create 201, read 200, exit cleanup 404
+attempt 15: create 201, read 200, exit cleanup 404
+attempt 16: create 201, read 200, exit cleanup 404
+attempt 17: create 201, read 200, exit cleanup 404
+attempt 18: create 201, read 200, exit cleanup 404
+attempt 19: create 201, read 200, exit cleanup 404
+attempt 20: create 201, read 200, exit cleanup 404
+20/20 isolated Chromium demo starts and exits succeeded on build 309f25e5054d1672dacbf024a573352853b88e9c.

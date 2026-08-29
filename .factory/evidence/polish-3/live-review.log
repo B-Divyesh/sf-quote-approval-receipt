@@ -1,0 +1,5 @@
+
+> quote-approval-receipt@1.3.0 test:live-review
+> node scripts/live-review-check.mjs
+
+{"routes":6,"firstScreen":{"headline":true,"action":true,"facts":true,"overflow":false},"demoDeleted":404,"origins":["https://quote-approval-receipt.sociobot.in"]}

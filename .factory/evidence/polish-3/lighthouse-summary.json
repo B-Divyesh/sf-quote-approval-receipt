@@ -1,0 +1,19 @@
+{
+  "url": "https://quote-approval-receipt.sociobot.in/",
+  "checked_at": "2026-08-29T04:17:24.211Z",
+  "lighthouse_version": "13.0.1",
+  "mobile_scores": {
+    "performance": 100,
+    "accessibility": 100,
+    "best_practices": 100,
+    "seo": 100
+  },
+  "metrics": {
+    "first_contentful_paint_ms": 930,
+    "largest_contentful_paint_ms": 1530,
+    "cumulative_layout_shift": 0,
+    "total_blocking_time_ms": 6,
+    "speed_index_ms": 930
+  },
+  "run_warnings": []
+}
