@@ -10,14 +10,14 @@ fs.mkdirSync(evidence, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const results = [];
 const expected = [
-  ['/', 200, 'Quote Approval Receipt — Record quote decisions', 'Record who approved your quote'],
-  ['/new', 200, 'Make an approval link — Quote Approval Receipt', 'Make a quote approval link'],
-  ['/privacy', 200, 'Privacy — Quote Approval Receipt', 'Privacy that fits the record'],
-  ['/terms', 200, 'Terms — Quote Approval Receipt', 'Terms for clear quote records'],
-  ['/missing-review-route', 404, 'Not found — Quote Approval Receipt', 'This page was not found'],
+  ['/', 200, 'Quote Approval Receipt — Record quote decisions', 'Record who approved your quote', 'Capture who approved a fixed quote and issue a timestamped PDF receipt.', '/'],
+  ['/new', 200, 'Make an approval link — Quote Approval Receipt', 'Make a quote approval link', 'Enter an existing quote and create a private decision link.', '/new'],
+  ['/privacy', 200, 'Privacy — Quote Approval Receipt', 'How we store quote and approver data', 'What quote and approver data we store and how to remove it.', '/privacy'],
+  ['/terms', 200, 'Terms — Quote Approval Receipt', 'Terms for quote approval records', 'Terms for using Quote Approval Receipt.', '/terms'],
+  ['/missing-review-route', 404, 'Not found — Quote Approval Receipt', 'This page was not found', 'The requested page was not found.', '/missing-review-route'],
 ];
 
-for (const [path, status, title, h1] of expected) {
+for (const [path, status, title, h1, description, canonicalPath] of expected) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   const errors = [];
@@ -30,15 +30,19 @@ for (const [path, status, title, h1] of expected) {
     h1Count: document.querySelectorAll('h1').length,
     overflow: document.documentElement.scrollWidth > innerWidth,
     canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href'),
+    description: document.querySelector('meta[name="description"]')?.getAttribute('content'),
     ogTitle: document.querySelector('meta[property="og:title"]')?.getAttribute('content'),
+    ogDescription: document.querySelector('meta[property="og:description"]')?.getAttribute('content'),
     twitterTitle: document.querySelector('meta[name="twitter:title"]')?.getAttribute('content'),
+    twitterDescription: document.querySelector('meta[name="twitter:description"]')?.getAttribute('content'),
     privacy: Boolean(document.querySelector('footer a[href="/privacy"]')),
     terms: Boolean(document.querySelector('footer a[href="/terms"]')),
   }));
   const axe = await new AxeBuilder({ page }).analyze();
   const serious = axe.violations.filter(violation => ['serious', 'critical'].includes(violation.impact || ''));
   const unexpectedErrors = status === 404 ? errors.filter(error => !/status of 404/i.test(error)) : errors;
-  if (response?.status() !== status || actual.title !== title || actual.h1 !== h1 || actual.h1Count !== 1 || actual.overflow || !actual.privacy || !actual.terms || actual.ogTitle !== title || actual.twitterTitle !== title || unexpectedErrors.length || serious.length) {
+  const canonical = `${base}${canonicalPath}`;
+  if (response?.status() !== status || actual.title !== title || actual.h1 !== h1 || actual.h1Count !== 1 || actual.overflow || !actual.privacy || !actual.terms || actual.canonical !== canonical || actual.description !== description || actual.ogTitle !== title || actual.ogDescription !== description || actual.twitterTitle !== title || actual.twitterDescription !== description || unexpectedErrors.length || serious.length) {
     throw new Error(`${path} failed: ${JSON.stringify({ status: response?.status(), actual, errors: unexpectedErrors, serious })}`);
   }
   if (path === '/missing-review-route') await page.screenshot({ path: `${evidence}/404-mobile.png`, fullPage: true });

@@ -353,6 +353,13 @@ async fn persist_database(state: &AppState) -> std::io::Result<()> {
         return Ok(());
     };
     let _guard = state.persist_lock.lock().await;
+    // The pool has one connection. Holding it while copying prevents a later
+    // write from changing the SQLite file during the durable snapshot.
+    let _connection = state
+        .db
+        .acquire()
+        .await
+        .map_err(|error| std::io::Error::other(error.to_string()))?;
     copy_file_bytes(&state.db_path, destination).await
 }
 

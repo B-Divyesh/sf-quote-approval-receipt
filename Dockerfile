@@ -1,4 +1,6 @@
 FROM node:22-bookworm-slim AS frontend
+ARG BUILD_SHA=dev
+ENV VITE_BUILD_SHA=${BUILD_SHA}
 WORKDIR /src
 COPY package.json package-lock.json tsconfig.json vite.config.ts ./
 COPY frontend ./frontend

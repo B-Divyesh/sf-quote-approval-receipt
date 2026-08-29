@@ -43,10 +43,10 @@
   },
   {
     "id": "studio-offer",
-    "claim": "Studio shows a $29 checkout only when it is available, and license holders can enter a license.",
-    "where": "landing Studio section",
+    "claim": "A $29 Studio checkout on Sociobot appears only when available, and license holders can enter a license.",
+    "where": "landing Studio section, privacy, terms, README",
     "test": "npm test -- --grep @claim:studio-offer",
-    "sandbox": "recorded available and unavailable Studio responses; assert the checkout state, price, and license field"
+    "sandbox": "recorded available and unavailable Studio responses; assert the exact Sociobot checkout destination, price, legal copy, and license entry flow"
   },
   {
     "id": "private-links",
@@ -88,6 +88,6 @@
     "claim": "A committed record is restored from the configured durable state directory after a replacement process starts.",
     "where": "README deploy section",
     "test": "npm run test:durable-snapshot",
-    "sandbox": "create a demo with one process and durable directory; start a second process with a different local directory and assert the record is readable"
+    "sandbox": "assert the one-replica Azure Files manifest; create 20 demos with one process; replace it with a different local directory and read all 20 from durable state"
   }
 ]

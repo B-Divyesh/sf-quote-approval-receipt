@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -30,6 +30,14 @@ async function stop(child) {
 }
 
 try {
+  const deployment = JSON.parse(await readFile('.factory/containerapp-deploy.json', 'utf8'));
+  const template = deployment.properties.template;
+  const app = template.containers.find(container => container.name === 'app');
+  assert.deepEqual(template.scale, { minReplicas: 1, maxReplicas: 1 }, 'deployment must have one SQLite writer');
+  assert.ok(app.env.some(item => item.name === 'DURABLE_DATA_DIR' && item.value === '/durable'));
+  assert.ok(app.volumeMounts.some(item => item.volumeName === 'durable' && item.mountPath === '/durable'));
+  assert.ok(template.volumes.some(item => item.name === 'durable' && item.storageName === 'quote-approval-receipt-data'));
+
   const first = await start(join(root, 'local-one'));
   const tokens = [];
   for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -53,7 +61,7 @@ try {
     assert.equal((await response.json()).demo, true);
   }
   await stop(second.child);
-  console.log('@claim:durable-snapshot 20 committed records survive a replacement process through the durable state directory');
+  console.log('@claim:durable-snapshot one-replica mount contract passes; 20 committed records survive replacement through durable state');
 } finally {
   await rm(root, { recursive: true, force: true });
 }

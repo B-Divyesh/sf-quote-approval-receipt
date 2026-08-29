@@ -22,6 +22,9 @@ test('landing says what to do and has no serious accessibility errors', async ({
   await expect(page.locator('h1')).toHaveCount(1);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Record who approved your quote');
   await expect(page.getByRole('link', { name: 'Try it with sample data' })).toBeVisible();
+  await expect(page.getByText('Receipt: PDF after a decision')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Turn an existing quote into an approval link' })).toBeVisible();
+  await expect(page.getByText(/\bclear\b/i)).toHaveCount(0);
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter(v => ['serious', 'critical'].includes(v.impact ?? ''))).toEqual([]);
 });
@@ -66,13 +69,16 @@ test('@claim:quote-snapshot an approval link shows the saved quote details', asy
   });
 });
 
-test('@claim:studio-offer Studio shows checkout only when it is available and accepts license restoration', async ({ browser }) => {
+test('@claim:studio-offer Studio uses its exact Sociobot checkout only when available and accepts a license', async ({ browser }) => {
   const available = await browser.newContext();
   const page = await available.newPage();
-  await page.route('**/api/studio', route => route.fulfill({ json: { available: true, checkout_url: 'https://api.sociobot.in/api/v1/products/quote-approval-receipt/checkout' } }));
+  const checkout = 'https://api.sociobot.in/api/v1/products/quote-approval-receipt/checkout';
+  await page.route('**/api/studio', route => route.fulfill({ json: { available: true, checkout_url: checkout } }));
   await page.goto('/');
   await expect(page.getByText('$29 once.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Buy Studio for $29' })).toHaveAttribute('href', /checkout$/);
+  await expect(page.getByRole('link', { name: 'Buy Studio for $29' })).toHaveAttribute('href', checkout);
+  await expect(page.getByText('Checkout opens on Sociobot.')).toBeVisible();
+  await expect(page.getByText(/Dodo|merchant of record/i)).toHaveCount(0);
   await page.getByRole('button', { name: 'Enter a Studio license' }).click();
   await expect(page.getByLabel('License token')).toBeVisible();
   await page.route('**/api/v1/products/quote-approval-receipt/verify?license=*', route => route.fulfill({ json: { valid: true, reason: 'ok' } }));
@@ -89,6 +95,19 @@ test('@claim:studio-offer Studio shows checkout only when it is available and ac
   await expect(unavailablePage.getByText('Studio checkout is not available. Free links keep records for 30 days.')).toBeVisible();
   await expect(unavailablePage.getByRole('link', { name: 'Buy Studio for $29' })).toHaveCount(0);
   await unavailable.close();
+
+  const legal = await browser.newContext();
+  const legalPage = await legal.newPage();
+  for (const [path, heading] of [
+    ['/privacy', 'How we store quote and approver data'],
+    ['/terms', 'Terms for quote approval records'],
+  ]) {
+    await legalPage.goto(path);
+    await expect(legalPage.getByRole('heading', { level: 1 })).toHaveText(heading);
+    await expect(legalPage.getByText('The $29 Studio checkout opens on Sociobot when the product is available.')).toBeVisible();
+    await expect(legalPage.getByText(/Dodo|merchant of record/i)).toHaveCount(0);
+  }
+  await legal.close();
 });
 
 test('@claim:pdf-receipt PDF contains the full snapshot, time, and international identity', async ({ request }) => {
@@ -234,7 +253,7 @@ test('invalid currencies fail cleanly and response policies are enforced', async
   expect(asset.headers()['content-encoding']).toBe('br');
 });
 
-test('keyboard navigation and route focus work', async ({ page }) => {
+test('keyboard navigation, history, and route focus work', async ({ page }) => {
   await page.goto('/');
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Skip to main' })).toBeFocused();
@@ -244,23 +263,43 @@ test('keyboard navigation and route focus work', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
   await expect(page.getByText('Half-day product shoot')).toBeVisible();
+  await page.getByRole('link', { name: 'Start for real' }).click();
+  await expect(page).toHaveURL('/new');
+  await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+  await page.goBack();
+  await expect(page).toHaveURL(/\?demo=1$/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+  await page.goBack();
+  await expect(page).toHaveURL('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
 });
 
-test('each public route updates social metadata and the 404 stays within a 390px viewport', async ({ page }) => {
+test('each public route has real status, metadata, headings, legal links, and a bounded 404', async ({ page }) => {
   const expected = [
-    ['/privacy', 'Privacy — Quote Approval Receipt', 'What quote and approver data we store and how to remove it.'],
-    ['/terms', 'Terms — Quote Approval Receipt', 'Terms for using Quote Approval Receipt.'],
-    ['/new', 'Make an approval link — Quote Approval Receipt', 'Enter an existing quote and create a private decision link.'],
-    ['/?demo=1', 'Demo — Quote Approval Receipt', 'Try a sample quote decision in an isolated demo.'],
-    ['/missing-page', 'Not found — Quote Approval Receipt', 'The requested page was not found.'],
+    ['/', 200, 'Quote Approval Receipt — Record quote decisions', 'Capture who approved a fixed quote and issue a timestamped PDF receipt.', 'Record who approved your quote', '/'],
+    ['/privacy', 200, 'Privacy — Quote Approval Receipt', 'What quote and approver data we store and how to remove it.', 'How we store quote and approver data', '/privacy'],
+    ['/terms', 200, 'Terms — Quote Approval Receipt', 'Terms for using Quote Approval Receipt.', 'Terms for quote approval records', '/terms'],
+    ['/new', 200, 'Make an approval link — Quote Approval Receipt', 'Enter an existing quote and create a private decision link.', 'Make a quote approval link', '/new'],
+    ['/?demo=1', 200, 'Demo — Quote Approval Receipt', 'Try a sample quote decision in an isolated demo.', 'Review and decide on this quote', '/demo'],
+    ['/demo', 200, 'Demo — Quote Approval Receipt', 'Try a sample quote decision in an isolated demo.', 'Review and decide on this quote', '/demo'],
+    ['/missing-page', 404, 'Not found — Quote Approval Receipt', 'The requested page was not found.', 'This page was not found', '/missing-page'],
   ];
-  for (const [path, title, description] of expected) {
-    await page.goto(path);
+  for (const [path, status, title, description, heading, canonical] of expected) {
+    const response = await page.goto(String(path));
+    expect(response?.status()).toBe(status);
     await expect(page).toHaveTitle(title);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+    await expect(page.locator('main')).toHaveCount(1);
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
+    await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', description);
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `https://quote-approval-receipt.sociobot.in${canonical}`);
     await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', title);
     await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', description);
     await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', title);
     await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content', description);
+    await expect(page.locator('footer a[href="/privacy"]')).toHaveCount(1);
+    await expect(page.locator('footer a[href="/terms"]')).toHaveCount(1);
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/404-review-missing');
@@ -269,16 +308,19 @@ test('each public route updates social metadata and the 404 stays within a 390px
 });
 
 test('@mobile 390px pages reflow at 200% text and controls meet target size', async ({ page }) => {
-  for (const path of ['/', '/new', '/?demo=1', '/privacy', '/404-review-missing']) {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const path of ['/', '/new', '/?demo=1', '/demo', '/privacy', '/terms', '/404-review-missing']) {
     await page.goto(path);
     await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
-  await page.goto('/');
-  const undersized = await page.locator('a:visible, button:visible').evaluateAll(nodes => nodes
-    .map(node => ({ text: node.textContent?.trim(), box: node.getBoundingClientRect() }))
-    .filter(({ box }) => box.width < 44 || box.height < 44));
-  expect(undersized).toEqual([]);
+  for (const path of ['/', '/new', '/?demo=1', '/privacy', '/terms', '/404-review-missing']) {
+    await page.goto(path);
+    const undersized = await page.locator('a:visible, button:visible').evaluateAll(nodes => nodes
+      .map(node => ({ text: node.textContent?.trim(), box: node.getBoundingClientRect() }))
+      .filter(({ box }) => box.width < 44 || box.height < 44));
+    expect(undersized, `${path} has undersized controls`).toEqual([]);
+  }
 });
 
 test('all public screens have no serious accessibility errors and reduced motion stops animation', async ({ page }) => {
@@ -290,4 +332,15 @@ test('all public screens have no serious accessibility errors and reduced motion
     expect(results.violations.filter(v => ['serious', 'critical'].includes(v.impact ?? ''))).toEqual([]);
   }
   expect(await page.evaluate(() => document.getAnimations().filter(a => a.playState === 'running').length)).toBe(0);
+});
+
+test('@offline unavailable backend paths fail with a useful next step', async ({ page }) => {
+  await page.route('**/api/studio', route => route.abort('internetdisconnected'));
+  await page.goto('/');
+  await expect(page.getByText('Studio availability could not be checked. Free links keep records for 30 days.')).toBeVisible();
+  await page.route('**/api/demo', route => route.abort('internetdisconnected'));
+  await page.goto('/?demo=1');
+  await expect(page.getByRole('heading', { name: 'The demo could not start' })).toBeVisible();
+  await expect(page.getByText(/Check your connection and try again/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Reset the demo' })).toHaveAttribute('href', '/demo');
 });

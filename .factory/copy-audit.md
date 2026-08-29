@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Audited 2026-08-29 after polish round 2. Counts treat hyphenated terms and symbols as one word. No sentence exceeds 22 words. No banned word appears.
+Audited 2026-08-29 after polish round 3. Counts treat hyphenated terms and symbols as one word. No sentence exceeds 22 words. No banned word appears.
 
 | Landing sentence or control | Words | Result |
 | --- | ---: | --- |
@@ -11,10 +11,10 @@ Audited 2026-08-29 after polish round 2. Counts treat hyphenated terms and symbo
 | Nothing enters your records. | 4 | pass |
 | Free: 30-day link retention | 4 | pass |
 | Private: delete or export each record | 6 | pass |
-| Clear: PDF receipt after a decision | 6 | pass |
+| Receipt: PDF after a decision | 5 | pass |
 | Fix the quote. Name the decision maker. Keep the receipt. | 12 | pass |
 | Example approval receipt | 3 | pass |
-| Turn an existing quote into one clear link | 8 | pass |
+| Turn an existing quote into an approval link | 8 | pass |
 | Paste the agreed scope and totals, then make an approval link. | 10 | pass |
 | Make an approval link | 4 | pass |
 | How approval links work | 4 | pass |
@@ -33,6 +33,11 @@ Audited 2026-08-29 after polish round 2. Counts treat hyphenated terms and symbo
 | No tracking scripts run here. | 5 | pass |
 | Keep receipts for one year | 5 | pass |
 | Checking Studio availability… | 3 | pass |
+| $29 once. | 2 | pass |
+| Studio adds 365-day retention. | 4 | pass |
+| The free tier keeps 30 days. | 6 | pass |
+| Buy Studio for $29 | 4 | pass |
+| Checkout opens on Sociobot. | 4 | pass — `studio-offer` |
 | Studio checkout is not available. | 5 | pass |
 | Free links keep records for 30 days. | 7 | pass |
 | Enter a Studio license | 4 | pass |
@@ -46,6 +51,9 @@ Audited 2026-08-29 after polish round 2. Counts treat hyphenated terms and symbo
 | The link may be mistyped, expired, or deleted. | 8 | pass |
 | Quote decision receipt | 3 | pass |
 | Request error | 2 | pass |
+| How we store quote and approver data | 7 | pass — plain Privacy H1 |
+| Terms for quote approval records | 5 | pass — plain Terms H1 |
+| The $29 Studio checkout opens on Sociobot when the product is available. | 11 | pass — `studio-offer` |
 | Ask a legal adviser whether this record meets your needs. | 10 | pass |
 | Reset demo | 2 | pass |
 | Start for real | 3 | pass |

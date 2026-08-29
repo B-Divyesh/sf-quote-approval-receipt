@@ -1,13 +1,14 @@
 {
   "name": "quote-approval-receipt",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "start": "cargo run",
-    "test": "npm run build && cargo test && npm run test:runtime-contract && npm run test:durable-snapshot && playwright test",
+    "test": "npm run test:claims-manifest && npm run build && cargo test && npm run test:runtime-contract && npm run test:durable-snapshot && playwright test",
+    "test:claims-manifest": "node tests/claims-manifest.mjs",
     "test:runtime-contract": "cargo build --release && node tests/runtime-contract.mjs",
     "test:durable-snapshot": "cargo build --release && node tests/durable-snapshot.mjs",
     "test:live-demo": "node scripts/live-demo-check.mjs",

@@ -2,7 +2,7 @@
 
 Capture who approved a fixed quote and issue a timestamped receipt.
 
-Quote Approval Receipt is for small agencies and contractors who receive approvals in email or chat. It creates a private link for an existing quote. The client names the decision maker, approves or requests changes, and receives a PDF record.
+Quote Approval Receipt is for small agencies and contractors who receive approvals in email or chat. It creates a private link for an existing quote. The client names the decision maker, approves or requests changes, and receives a PDF receipt.
 
 ## Try the sample
 
@@ -44,7 +44,7 @@ Each real quote gets independent random approval and owner tokens. The owner tok
 
 Each fixed quote accepts one final decision. API write bursts return `429` with `Retry-After` when they exceed the limit.
 
-Free links retain records for 30 days. A 365-day request succeeds only after the backend verifies a Studio license with Sociobot. Studio checkout appears only when Sociobot reports availability. License holders can enter a license on any device.
+Free links retain records for 30 days. A 365-day request succeeds only after the backend verifies a Studio license with Sociobot. A $29 Studio checkout on Sociobot appears only when the product is available. License holders can enter a license.
 
 ## Deploy
 
