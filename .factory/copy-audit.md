@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Audited 2026-08-29 after polish round 3. Counts treat hyphenated terms and symbols as one word. No sentence exceeds 22 words. No banned word appears.
+Audited 2026-08-29 after polish round 4. Counts treat hyphenated terms and symbols as one word. No sentence exceeds 22 words. No banned word appears.
 
 | Landing sentence or control | Words | Result |
 | --- | ---: | --- |
@@ -42,6 +42,12 @@ Audited 2026-08-29 after polish round 3. Counts treat hyphenated terms and symbo
 | Free links keep records for 30 days. | 7 | pass |
 | Enter a Studio license | 4 | pass |
 | Named quote decisions, kept with the quote. | 7 | pass |
+
+## Documentation and catalog check
+
+- The removed README sentence claimed that one replica makes the write allowance global. It was not observable under the local `rate-limits` claim, so it is absent from `README.md` and `.factory/deployment.md`.
+- `.factory/catalog-description.txt`: `Record quote approvals and issue a named, timestamped PDF receipt.` starts with a verb and has 10 words (67 characters).
+- `npm run test:claims-manifest` rejects either removed global-limit sentence so this untested promise cannot return.
 
 ## Updated route copy
 
