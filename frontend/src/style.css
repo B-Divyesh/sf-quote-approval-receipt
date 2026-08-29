@@ -22,4 +22,5 @@ main,.quote-paper,.receipt,.legal{min-width:0}
 .text-button{min-width:44px;min-height:44px;padding:8px}
 footer nav a,.demo-bar a{display:inline-flex;align-items:center;min-width:44px;min-height:44px;padding:8px 0}
 .demo-bar .text-button{min-height:44px}
+.not-found{overflow:clip}
 @media(max-width:780px){.site-header{gap:8px;padding:10px 16px}.wordmark-label{display:none}.site-header nav{min-width:0}.site-header nav a{padding:8px 0}}

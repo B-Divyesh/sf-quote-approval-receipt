@@ -4,7 +4,14 @@
     "claim": "The sample demo stays separate from real records and remains readable after creation.",
     "where": "landing action note, demo banner, README, privacy",
     "test": "npm test -- --grep @claim:demo-sandbox",
-    "sandbox": "fresh browser context; open /demo; verify no owner keys and repeat the post-create read 16 times"
+    "sandbox": "fresh browser context; open /?demo=1; verify no owner keys and repeat the post-create read 20 times"
+  },
+  {
+    "id": "quote-snapshot",
+    "claim": "The approval link shows the saved quote details.",
+    "where": "landing preview",
+    "test": "npm test -- --grep @claim:quote-snapshot",
+    "sandbox": "create a quote with distinctive details and assert its approval endpoint returns those exact saved values"
   },
   {
     "id": "pdf-receipt",
@@ -33,6 +40,13 @@
     "where": "quote builder, privacy, terms, README",
     "test": "npm test -- --grep @claim:retention-policy",
     "sandbox": "assert exact API expiry windows and that a direct forged 365-day request returns 403"
+  },
+  {
+    "id": "studio-offer",
+    "claim": "Studio shows a $29 checkout only when it is available, and license holders can enter a license.",
+    "where": "landing Studio section",
+    "test": "npm test -- --grep @claim:studio-offer",
+    "sandbox": "recorded available and unavailable Studio responses; assert the checkout state, price, and license field"
   },
   {
     "id": "private-links",

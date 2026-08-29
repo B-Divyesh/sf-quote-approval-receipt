@@ -1,6 +1,6 @@
 # Demo sandbox
 
-- URL: `http://localhost:8080/demo` locally or `https://quote-approval-receipt.sociobot.in/demo` in production.
+- URL: `http://localhost:8080/?demo=1` locally or `https://quote-approval-receipt.sociobot.in/?demo=1` in production. `/demo` remains a readable direct alias.
 - Sample: Northstar Studio quote `NS-2048` for Juniper Market. It includes a half-day product shoot and 24 edited images.
 - Reset: choose **Reset demo** in the persistent yellow banner.
 - Isolation: each `POST /api/demo` creates a random backend workspace with a 24-hour expiry. Its quote has `demo_workspace` set and never creates an owner key in browser storage. The browser stores only the current demo pointer under the `sessionStorage` key `demo:workspace`.

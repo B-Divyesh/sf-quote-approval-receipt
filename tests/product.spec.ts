@@ -27,16 +27,56 @@ test('landing says what to do and has no serious accessibility errors', async ({
 });
 
 test('@claim:demo-sandbox sample demo stays separate and readable after creation', async ({ page, request }) => {
-  await page.goto('/demo');
+  await page.goto('/?demo=1');
   await expect(page.getByText('Demo — sample data, nothing is saved to your records')).toBeVisible();
   await expect(page.getByText('Half-day product shoot')).toBeVisible();
   expect(await page.evaluate(() => Object.keys(localStorage).filter(k => k.startsWith('owner:')))).toEqual([]);
   const demo = await page.evaluate(() => JSON.parse(sessionStorage.getItem('demo:workspace')!));
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 20; i++) {
     const quote = await request.get(`/api/share/${demo.quote.public_token}`, { headers: { 'x-forwarded-for': `198.51.100.${i + 20}` } });
     expect(quote.status()).toBe(200);
     expect((await quote.json()).demo).toBe(true);
   }
+});
+
+test('@claim:quote-snapshot an approval link shows the saved quote details', async ({ request }) => {
+  const made = await createQuote(request, '198.51.100.44', {
+    quote_number: 'FIXED-71', client_name: 'North Pier Books',
+    summary: 'Install a window display and deliver twelve printed cards.',
+    items: [{ description: 'Window display', quantity: 2, rate: 375 }],
+  });
+  const shown = await request.get(`/api/share/${made.public_token}`);
+  expect(shown.status()).toBe(200);
+  expect(await shown.json()).toMatchObject({
+    quote_number: 'FIXED-71', client_name: 'North Pier Books',
+    summary: 'Install a window display and deliver twelve printed cards.',
+    items: [{ description: 'Window display', quantity: 2, rate: 375 }],
+  });
+});
+
+test('@claim:studio-offer Studio shows checkout only when it is available and accepts license restoration', async ({ browser }) => {
+  const available = await browser.newContext();
+  const page = await available.newPage();
+  await page.route('**/api/studio', route => route.fulfill({ json: { available: true, checkout_url: 'https://api.sociobot.in/api/v1/products/quote-approval-receipt/checkout' } }));
+  await page.goto('/');
+  await expect(page.getByText('$29 once.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Buy Studio for $29' })).toHaveAttribute('href', /checkout$/);
+  await page.getByRole('button', { name: 'Enter a Studio license' }).click();
+  await expect(page.getByLabel('License token')).toBeVisible();
+  await page.route('**/api/v1/products/quote-approval-receipt/verify?license=*', route => route.fulfill({ json: { valid: true, reason: 'ok' } }));
+  await page.getByLabel('License token').fill('restored-license-token');
+  await page.getByRole('button', { name: 'Verify license' }).click();
+  await expect(page.getByText('Studio is active on this device.')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('sb_license:quote-approval-receipt'))).toBe('restored-license-token');
+  await available.close();
+
+  const unavailable = await browser.newContext();
+  const unavailablePage = await unavailable.newPage();
+  await unavailablePage.route('**/api/studio', route => route.fulfill({ json: { available: false, checkout_url: null } }));
+  await unavailablePage.goto('/');
+  await expect(unavailablePage.getByText('Studio checkout is not available. Free links keep records for 30 days.')).toBeVisible();
+  await expect(unavailablePage.getByRole('link', { name: 'Buy Studio for $29' })).toHaveCount(0);
+  await unavailable.close();
 });
 
 test('@claim:pdf-receipt PDF contains the full snapshot, time, and international identity', async ({ request }) => {
@@ -194,8 +234,29 @@ test('keyboard navigation and route focus work', async ({ page }) => {
   await expect(page.getByText('Half-day product shoot')).toBeVisible();
 });
 
+test('each public route updates social metadata and the 404 stays within a 390px viewport', async ({ page }) => {
+  const expected = [
+    ['/privacy', 'Privacy — Quote Approval Receipt', 'What quote and approver data we store and how to remove it.'],
+    ['/terms', 'Terms — Quote Approval Receipt', 'Terms for using Quote Approval Receipt.'],
+    ['/new', 'Make an approval link — Quote Approval Receipt', 'Enter an existing quote and create a private decision link.'],
+    ['/?demo=1', 'Demo — Quote Approval Receipt', 'Try a sample quote decision in an isolated demo.'],
+    ['/missing-page', 'Not found — Quote Approval Receipt', 'The requested page was not found.'],
+  ];
+  for (const [path, title, description] of expected) {
+    await page.goto(path);
+    await expect(page).toHaveTitle(title);
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', title);
+    await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', description);
+    await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', title);
+    await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content', description);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/404-review-missing');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test('@mobile 390px pages reflow at 200% text and controls meet target size', async ({ page }) => {
-  for (const path of ['/', '/new', '/privacy']) {
+  for (const path of ['/', '/new', '/privacy', '/404-review-missing']) {
     await page.goto(path);
     await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -209,7 +270,7 @@ test('@mobile 390px pages reflow at 200% text and controls meet target size', as
 
 test('all public screens have no serious accessibility errors and reduced motion stops animation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const path of ['/', '/new', '/demo', '/privacy', '/terms', '/missing-page']) {
+  for (const path of ['/', '/new', '/?demo=1', '/privacy', '/terms', '/missing-page']) {
     await page.goto(path);
     await expect(page.locator('h1')).toHaveCount(1);
     const results = await new AxeBuilder({ page }).analyze();

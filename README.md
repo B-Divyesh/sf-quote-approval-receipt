@@ -4,13 +4,11 @@ Capture who approved a fixed quote and issue a timestamped receipt.
 
 Quote Approval Receipt is for small agencies and contractors who receive approvals in email or chat. It creates a private link for an existing quote. The client names the decision maker, approves or requests changes, and receives a PDF record.
 
-This is not proposal software, payment collection, or a regulated e-signature service.
-
 ## Try the sample
 
-Open `/demo` after starting the service, or visit:
+Open `/?demo=1` after starting the service, or visit:
 
-https://quote-approval-receipt.sociobot.in/demo
+https://quote-approval-receipt.sociobot.in/?demo=1
 
 The demo creates a random workspace that expires after 24 hours. It stays separate from real quote records. See [`.factory/demo.md`](.factory/demo.md) for the sandbox contract.
 
@@ -46,11 +44,11 @@ Each real quote gets independent random approval and owner tokens. The owner tok
 
 Each fixed quote accepts one final decision. API write bursts return `429` with `Retry-After` when they exceed the limit.
 
-Free links retain records for 30 days. A 365-day request succeeds only after the backend verifies a Studio license with Sociobot. The page offers the $29 checkout only while Sociobot reports that the product is available; existing license holders can restore a license at any time.
+Free links retain records for 30 days. A 365-day request succeeds only after the backend verifies a Studio license with Sociobot. Studio checkout appears only when Sociobot reports availability. License holders can enter a license on any device.
 
 ## Deploy
 
-Build the root `Dockerfile`. The image runs as the non-root `app` user and needs only `PORT` to start. For the factory Container Apps release, keep exactly one replica and mount its dedicated Azure Files share at `/durable`; set `DURABLE_DATA_DIR=/durable`. The service writes a durable snapshot after each committed change, so a replacement process restores records before serving traffic. Durable storage is an optional deployment override for local use. The factory owns deployment, DNS, billing registration, and the production build SHA.
+Build the root `Dockerfile`. The image runs as the non-root `app` user and needs only `PORT` to start. For the factory Container Apps release, use one replica. Mount its dedicated Azure Files share at `/durable` and set `DURABLE_DATA_DIR=/durable`. The service writes a durable snapshot after each committed change, so a replacement process restores records before serving traffic. Durable storage is an optional deployment override for local use. The factory owns deployment, DNS, billing registration, and the production build SHA.
 
 ## License
 
