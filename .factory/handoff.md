@@ -49,6 +49,7 @@ LIVE_URL=https://quote-approval-receipt.sociobot.in npm run test:live-rate-limit
 - Build identity: `/health` returns `4d68afe8ba19f84a7e83e90e8a006426addd6621` and `durable_snapshot: true`.
 - Demo core flow: pass; 20/20 separate 390 px Chromium contexts created (`201`), read (`200`), and deleted (`404`) isolated sample workspaces.
 - Rate limit: pass; 15 concurrent writes returned `201`; the sixteenth admission returned `429` with `Retry-After: 1`; all samples were removed.
+- Load/identity smoke: 100 concurrent `/health` requests returned 100×`200` in 386 ms; every response carried the durable `4d68afe…` identity.
 - Live mobile review: pass; landing, builder, Privacy, Terms, 404, demo cleanup, same-origin request policy, metadata, no horizontal overflow, and zero serious/critical Axe violations through Playwright AxeBuilder. Evidence is in `.factory/evidence/repair-5/`.
 - `/opt/fleet/lib/verify-url.sh`: pass; 571 ms desktop load, title/lang/one H1/main/alt/button checks pass, no console errors. The standalone Axe CLI was attempted with its default browser and the installed Playwright Chromium, but its Selenium ChromeDriver is version-mismatched; the equivalent Playwright AxeBuilder audit above passed for every public route.
 
