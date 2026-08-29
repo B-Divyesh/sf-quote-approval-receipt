@@ -1,3 +1,22 @@
+# Verification 12 handoff — PASS
+
+- Candidate and live build: `fe0b3a58c7c52180ae1a46f3e2012529860c7c92`
+- URL: <https://quote-approval-receipt.sociobot.in>
+- Decision: **PASS**
+
+Independent QA passed the complete local test suite, all 13 manifest claims,
+TypeScript/Rust checks, accessibility and mobile coverage, and an end-to-end
+live sender/client approval workflow. Live health reported the candidate SHA;
+the deployed service has one durable replica. The enforced allowance is 40
+reads or 15 writes per burst, followed by `429 Retry-After: 1`.
+
+See [verification-12.md](verification-12.md) for exact commands, evidence,
+headers/privacy results, first-read assessment, and the only environment note:
+Docker is not installed in this verifier container, so a local image build was
+not executable. No release-blocking product defects remain.
+
+---
+
 # Repair 9 handoff — PASS
 
 - Work order: `quote-approval-receipt-repair-9`

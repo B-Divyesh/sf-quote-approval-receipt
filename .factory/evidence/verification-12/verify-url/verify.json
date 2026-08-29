@@ -1,0 +1,14 @@
+{
+  "url": "https://quote-approval-receipt.sociobot.in",
+  "loadMs": 657,
+  "errors": [],
+  "a11y": {
+    "title": "Quote Approval Receipt — Record quote decisions",
+    "lang": "en",
+    "h1": 1,
+    "main": true,
+    "imgsMissingAlt": 0,
+    "buttonsUnlabeled": 0,
+    "textLength": 1417
+  }
+}

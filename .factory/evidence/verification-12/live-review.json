@@ -1,0 +1,110 @@
+{
+  "base": "https://quote-approval-receipt.sociobot.in",
+  "checkedAt": "2026-08-29T15:12:30.051Z",
+  "firstScreen": {
+    "headline": true,
+    "action": true,
+    "facts": true,
+    "overflow": false
+  },
+  "results": [
+    {
+      "path": "/",
+      "status": 200,
+      "title": "Quote Approval Receipt — Record quote decisions",
+      "h1": "Record who approved your quote",
+      "h1Count": 1,
+      "overflow": false,
+      "canonical": "https://quote-approval-receipt.sociobot.in/",
+      "description": "Capture who approved a fixed quote and issue a timestamped PDF receipt.",
+      "ogTitle": "Quote Approval Receipt — Record quote decisions",
+      "ogDescription": "Capture who approved a fixed quote and issue a timestamped PDF receipt.",
+      "twitterTitle": "Quote Approval Receipt — Record quote decisions",
+      "twitterDescription": "Capture who approved a fixed quote and issue a timestamped PDF receipt.",
+      "privacy": true,
+      "terms": true,
+      "seriousCritical": 0,
+      "consoleErrors": 0
+    },
+    {
+      "path": "/new",
+      "status": 200,
+      "title": "Make an approval link — Quote Approval Receipt",
+      "h1": "Make a quote approval link",
+      "h1Count": 1,
+      "overflow": false,
+      "canonical": "https://quote-approval-receipt.sociobot.in/new",
+      "description": "Enter an existing quote and create a private decision link.",
+      "ogTitle": "Make an approval link — Quote Approval Receipt",
+      "ogDescription": "Enter an existing quote and create a private decision link.",
+      "twitterTitle": "Make an approval link — Quote Approval Receipt",
+      "twitterDescription": "Enter an existing quote and create a private decision link.",
+      "privacy": true,
+      "terms": true,
+      "seriousCritical": 0,
+      "consoleErrors": 0
+    },
+    {
+      "path": "/privacy",
+      "status": 200,
+      "title": "Privacy — Quote Approval Receipt",
+      "h1": "How we store quote and approver data",
+      "h1Count": 1,
+      "overflow": false,
+      "canonical": "https://quote-approval-receipt.sociobot.in/privacy",
+      "description": "What quote and approver data we store and how to remove it.",
+      "ogTitle": "Privacy — Quote Approval Receipt",
+      "ogDescription": "What quote and approver data we store and how to remove it.",
+      "twitterTitle": "Privacy — Quote Approval Receipt",
+      "twitterDescription": "What quote and approver data we store and how to remove it.",
+      "privacy": true,
+      "terms": true,
+      "seriousCritical": 0,
+      "consoleErrors": 0
+    },
+    {
+      "path": "/terms",
+      "status": 200,
+      "title": "Terms — Quote Approval Receipt",
+      "h1": "Terms for quote approval records",
+      "h1Count": 1,
+      "overflow": false,
+      "canonical": "https://quote-approval-receipt.sociobot.in/terms",
+      "description": "Terms for using Quote Approval Receipt.",
+      "ogTitle": "Terms — Quote Approval Receipt",
+      "ogDescription": "Terms for using Quote Approval Receipt.",
+      "twitterTitle": "Terms — Quote Approval Receipt",
+      "twitterDescription": "Terms for using Quote Approval Receipt.",
+      "privacy": true,
+      "terms": true,
+      "seriousCritical": 0,
+      "consoleErrors": 0
+    },
+    {
+      "path": "/missing-review-route",
+      "status": 404,
+      "title": "Not found — Quote Approval Receipt",
+      "h1": "This page was not found",
+      "h1Count": 1,
+      "overflow": false,
+      "canonical": "https://quote-approval-receipt.sociobot.in/missing-review-route",
+      "description": "The requested page was not found.",
+      "ogTitle": "Not found — Quote Approval Receipt",
+      "ogDescription": "The requested page was not found.",
+      "twitterTitle": "Not found — Quote Approval Receipt",
+      "twitterDescription": "The requested page was not found.",
+      "privacy": true,
+      "terms": true,
+      "seriousCritical": 0,
+      "consoleErrors": 0
+    },
+    {
+      "path": "/?demo=1 → /new",
+      "deletedStatus": 404,
+      "demoKeys": [],
+      "origins": [
+        "https://quote-approval-receipt.sociobot.in"
+      ]
+    }
+  ]
+}
