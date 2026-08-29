@@ -2,6 +2,7 @@
 
 - Work order: `quote-approval-receipt-polish-3`
 - Repaired application commit: `309f25e5054d1672dacbf024a573352853b88e9c`
+- Evidence bundle verified from remote: `c29b15ce6b83fab0c2318671a37ece5b83010d9d`
 - Live URL: <https://quote-approval-receipt.sociobot.in>
 - Live revision: `sf-quote-approval-receipt--0000021`
 - Image: `sociobotregistry.azurecr.io/sf-quote-approval-receipt:309f25e5054d`
@@ -19,7 +20,7 @@ The catalog description is now: `Record who approved each quote and issue a name
 
 ## Clean-clone verification
 
-Clone: `/tmp/qar-polish3-clean.yZwPYH/repo`, checked out at `309f25e5054d1672dacbf024a573352853b88e9c`.
+Final remote clone: `/tmp/qar-polish3-final.ZJDhlz/repo`, checked out at `c29b15ce6b83fab0c2318671a37ece5b83010d9d`. An earlier clean application-only clone at `309f25e…` produced the same results.
 
 - `npm ci`: pass, 0 vulnerabilities.
 - Every exact command in `.factory/claims.json`: 13/13 pass.
