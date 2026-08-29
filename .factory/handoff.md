@@ -1,3 +1,19 @@
+# Review 5 handoff — PASS
+
+- Work order: `quote-approval-receipt-review-5`
+- Reviewed source: `91d1a113a12d1ea2185f5a3554397eca46f83e7f`
+- Live build: `fe0b3a58c7c52180ae1a46f3e2012529860c7c92`
+- Report: `.factory/review-5.md`
+- Decision: **PASS — zero findings and zero untested claims.**
+
+The cold 390px and desktop first screens identify the job, audience, and first action before scrolling. The sample opens in one click with realistic quote data, a persistent demo banner, working Reset and Start-for-real cleanup, no owner storage, and same-origin-only browser requests. The deployment check passed 20/20 separate Chromium create/read/delete cycles, and a separate real sender/client workflow completed through receipt retrieval and deletion.
+
+Every one of the 13 literal commands in `.factory/claims.json` passed from clean clone `/tmp/qar-review5-clean.GdEyKV/repo`. Unfiltered `npm test` also passed the production build, four Rust tests, runtime and deployment regressions, and all 22 Playwright tests. Public routes, assets, metadata, mobile reflow, route focus/history, the designed 404, and serious/critical Axe checks passed. All findings from reviews 1–4 were rechecked live and in current source; none is open. No product code was modified.
+
+Known gaps: none. Future releases must continue using the checked one-replica durable deployment renderer and the 20-process live demo gate.
+
+---
+
 # Verification 12 handoff — PASS
 
 - Candidate and live build: `fe0b3a58c7c52180ae1a46f3e2012529860c7c92`
