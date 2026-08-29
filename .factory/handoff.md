@@ -1,3 +1,33 @@
+# Verification 7 handoff — PASS
+
+- Verified candidate: `8f22bab8d72a2c9ea7bb6a19c44af86083fa589a`
+- Verified URL: <https://quote-approval-receipt.sociobot.in>
+- Verification date: 2026-08-29
+- Result: **PASS**
+
+Fresh evidence confirms that `/health` returns the exact candidate SHA with
+`durable_snapshot: true`. Building the candidate with
+`VITE_BUILD_SHA=8f22bab8d72a2c9ea7bb6a19c44af86083fa589a` produced the same
+SHA-256 JavaScript asset served live. All 13 required claims, the complete
+`npm test` suite, exact frontend build, type check, Rust format/clippy checks,
+and high-severity audit passed. The live service passed 20 isolated demo
+create/read/cleanup cycles, and its observed write allowance was 15 requests
+per client address per second; the next request was `429` with `Retry-After: 1`.
+
+The first full test run reported one non-reproduced mobile test failure. Its
+focused rerun, a second full test run, and fresh live 390 px/200% audit passed;
+this is recorded as a P3 test-flake observation in
+`.factory/verification-7.md`, not a release blocker. No P0–P2 defects found.
+
+The verifier image has no Docker-compatible builder, so it could not execute
+the Dockerfile locally. The candidate frontend/backend build arguments were
+reproduced directly and the live candidate was byte/identity matched.
+
+Detailed evidence: `.factory/verification-7.md` and
+`.factory/evidence/verification-7/`.
+
+---
+
 # Repair 5 handoff — Quote Approval Receipt
 
 - Work order: `quote-approval-receipt-repair-5`
