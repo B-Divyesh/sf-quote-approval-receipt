@@ -18,7 +18,7 @@ The catalog description is now the verb-first 70-character line `Record who appr
 
 ## Verification
 
-- Clean clone: `/tmp/qar-polish2-clean.uKb4BB/repo` at `0d501ac`; `npm ci` found 0 vulnerabilities. Every one of the 13 exact commands in `.factory/claims.json` passed. Logs are `/tmp/qar-polish2-clean.uKb4BB/claim-<id>.log`.
+- Final clean clone: `/tmp/qar-polish2-final-clean.7yl07d/repo` at `ecff4e5`; `npm ci` found 0 vulnerabilities. Every one of the 13 exact commands in `.factory/claims.json` passed. Logs are `/tmp/qar-polish2-final-clean.7yl07d/claim-<id>.log`.
 - Full local suite: `npm test` passed 4 Rust tests, runtime-only startup, durable replacement, and 19 Playwright tests. The browser suite covers the complete quote/PDF path, owner retrieval, Unicode, concurrent decisions, validation, privacy headers, keyboard focus, reduced motion, all public routes, Axe, 390 px, and 200% text.
 - Static checks: `npm run check`, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `npm audit --audit-level=high`, and `git diff --check` passed.
 - Build: `npm run build` produced `dist/`. JS is 27.01 KB raw / 8.96 KB gzip; CSS is 15.48 KB raw / 4.20 KB gzip; hero WebP is 104,994 bytes.

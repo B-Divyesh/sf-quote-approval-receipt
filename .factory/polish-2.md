@@ -4,7 +4,7 @@
 - Functional repairs: `0d501ac`, `8055c4c`
 - Live URL: <https://quote-approval-receipt.sociobot.in>
 - Live revision/build: `sf-quote-approval-receipt--0000019` / `8055c4c`
-- Clean-claim evidence: `/tmp/qar-polish2-clean.uKb4BB/`
+- Final clean-claim evidence: `/tmp/qar-polish2-final-clean.7yl07d/` at `ecff4e5`
 - Live evidence: `/tmp/qar-polish2-live.yP6XGH/`
 
 ## Adversarial review findings
