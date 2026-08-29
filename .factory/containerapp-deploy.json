@@ -15,7 +15,7 @@
           ]
         }
       ],
-      "scale": { "minReplicas": 1, "maxReplicas": 1, "pollingInterval": 30, "cooldownPeriod": 300 },
+      "scale": { "minReplicas": 1, "maxReplicas": 1 },
       "volumes": [
         { "name": "durable", "storageType": "AzureFile", "storageName": "quote-approval-receipt-data" }
       ]

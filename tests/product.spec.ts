@@ -269,7 +269,7 @@ test('each public route updates social metadata and the 404 stays within a 390px
 });
 
 test('@mobile 390px pages reflow at 200% text and controls meet target size', async ({ page }) => {
-  for (const path of ['/', '/new', '/privacy', '/404-review-missing']) {
+  for (const path of ['/', '/new', '/?demo=1', '/privacy', '/404-review-missing']) {
     await page.goto(path);
     await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

@@ -20,10 +20,17 @@ for (let attempt = 1; attempt <= 20; attempt += 1) {
     await page.getByText('Half-day product shoot').waitFor({ state: 'visible', timeout: 10_000 });
     const widthOk = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
     if (!widthOk) throw new Error(`attempt ${attempt}: demo page overflowed its viewport`);
-    console.log(`attempt ${attempt}: POST /api/demo 201, sample quote visible`);
+    const demo = await page.evaluate(() => JSON.parse(sessionStorage.getItem('demo:workspace')));
+    await page.getByRole('link', { name: 'Start for real' }).click();
+    await page.getByRole('heading', { name: 'Make a quote approval link' }).waitFor({ state: 'visible', timeout: 10_000 });
+    const retainedDemoKeys = await page.evaluate(() => Object.keys(sessionStorage).filter(key => key.startsWith('demo:')));
+    if (retainedDemoKeys.length) throw new Error(`attempt ${attempt}: demo session pointer was retained`);
+    const deletedShare = await page.request.get(`${base}/api/share/${demo.quote.public_token}`);
+    if (deletedShare.status() !== 404) throw new Error(`attempt ${attempt}: discarded sample returned ${deletedShare.status()}`);
+    console.log(`attempt ${attempt}: create 201, read 200, exit cleanup 404`);
   } finally {
     await browser.close();
   }
 }
 
-console.log('20/20 isolated Chromium demo starts succeeded.');
+console.log('20/20 isolated Chromium demo starts and exits succeeded.');

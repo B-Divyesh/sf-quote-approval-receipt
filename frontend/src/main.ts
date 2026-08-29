@@ -49,7 +49,7 @@ async function discardDemoWorkspace() {
 function shell(content: string, opts: {demo?: boolean; compact?: boolean} = {}) {
   const nav = opts.compact ? '' : `<nav aria-label="Main navigation"><a href="/demo" data-link>Demo</a><a href="/new" data-link>Make a link</a><a href="/privacy" data-link>Privacy</a></nav>`;
   app.innerHTML = `
-    ${opts.demo ? `<aside class="demo-bar" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved to your records</strong><span><button class="text-button" data-reset-demo>Reset demo</button><a href="/new" data-link>Start for real</a></span><span class="sr-only" id="demo-status" aria-live="polite"></span></aside>` : ''}
+    ${opts.demo ? `<aside class="demo-bar" aria-label="Demo mode"><strong>Demo — sample data, nothing is saved to your records</strong><span><button class="text-button" data-reset-demo>Reset demo</button><a href="/new" data-link>Start for real</a></span></aside>` : ''}
     <header class="site-header"><a class="wordmark" href="/" data-link aria-label="Quote Approval Receipt home"><span class="reel" aria-hidden="true"></span><span class="wordmark-label">Quote approval<br>receipt</span></a>${nav}</header>
     <main id="main" tabindex="-1">${content}</main>
     <div class="route-status" aria-live="polite" aria-atomic="true"></div>
