@@ -1,37 +1,28 @@
-# Polish 3 handoff — Quote Approval Receipt
+# Verification 5 handoff — Quote Approval Receipt
 
-- Work order: `quote-approval-receipt-polish-3`
-- Repaired application commit: `309f25e5054d1672dacbf024a573352853b88e9c`
-- Evidence bundle verified from remote: `c29b15ce6b83fab0c2318671a37ece5b83010d9d`
+- Work order: `quote-approval-receipt-verify-5`
+- Verified candidate: `adb2748c32faa2da6af03ce8d4b33137c5062dac`
 - Live URL: <https://quote-approval-receipt.sociobot.in>
-- Live revision: `sf-quote-approval-receipt--0000021`
-- Image: `sociobotregistry.azurecr.io/sf-quote-approval-receipt:309f25e5054d`
-- Digest: `sha256:7dbdba2a28419064c9daccb031a86bc7556413518558c394bbfd2dad0a579121`
+- Verdict: **FAIL — do not release**
 
-## Delivered
+## Verification result
 
-Closed every finding in `.factory/review-1.md`, `review-2.md`, `review-3.md`, and the earlier verification reports. The public app now runs as one mounted durable replica, and the snapshot operation excludes concurrent SQLite writes. The first-screen facts, approval-link heading, README receipt term, Privacy and Terms H1s, and payment wording are literal and consistent.
+No product code was changed by this verification. The deployed app is exactly the candidate: live `/health`, the footer build ID, and a SHA-256 comparison of the live JavaScript asset match `adb2748…`.
 
-The one-click `?demo=1` path creates an isolated sample, shows its persistent banner, resets by deleting the old workspace, and deletes the active workspace plus browser pointer on Start for real. All routes have real HTTP status, route-specific metadata, one H1, focus restoration, legal links, mobile reflow, and a product-specific 404.
+Local build, runtime, durability, accessibility, and claim checks pass after `npm ci`. The production backend does not: a required `/?demo=1` run receives `POST /api/demo` 201 followed immediately by `GET /api/share/<returned-token>` 404, rendering “The demo could not start”. The product’s own `npm run test:live-demo` now fails at its first attempt with that same 404.
 
-`.factory/claims.json` now has 13 unique claims. `test:claims-manifest` fails if an ID lacks exactly one tagged test. The Studio claim observes the exact Sociobot checkout route, both availability states, license entry, and policy copy. Untestable cross-device, Dodo, and merchant assertions were removed.
+The live server also accepts 20 writes from one fixed forwarded client address despite its documented 15-write/sec allowance; no response is 429 and no `Retry-After` header is sent. These are release-blocking deployment defects.
 
-The catalog description is now: `Record who approved each quote and issue a named, timestamped PDF receipt.` (74 characters, verb first).
+## How verified
 
-## Clean-clone verification
+On the clean candidate checkout:
 
-Final remote clone: `/tmp/qar-polish3-final.ZJDhlz/repo`, checked out at `c29b15ce6b83fab0c2318671a37ece5b83010d9d`. An earlier clean application-only clone at `309f25e…` produced the same results.
+- `npm ci`; every manifest claim command; `npm test`; `npm run check`; `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings`; `npm audit --audit-level=high`: PASS locally.
+- `npm run build` with candidate Vite build ID: PASS, `dist/` produced. Live JS SHA-256 matched exactly.
+- Live landing: plain-language first screen, first-party-only request log, headers, mobile 390 px, keyboard/static suite, reduced motion, and axe serious/critical checks: PASS.
+- Live demo and rate limit: FAIL as described above.
 
-- `npm ci`: pass, 0 vulnerabilities.
-- Every exact command in `.factory/claims.json`: 13/13 pass.
-- `npm test`: pass — manifest gate, production build, 4 Rust tests, runtime replacement, 20-record durable replacement, and 20/20 Playwright tests.
-- `npm run check`: pass.
-- `cargo fmt --check`: pass.
-- `cargo clippy --all-targets -- -D warnings`: pass.
-- `npm audit --audit-level=high`: pass.
-- Build output: JS 27.11 kB raw / 8.96 kB gzip; CSS 15.55 kB raw / 4.20 kB gzip; `dist/` produced.
-
-Run the same gates with:
+Run local gates with:
 
 ```bash
 npm ci
@@ -44,20 +35,14 @@ cargo clippy --all-targets -- -D warnings
 npm audit --audit-level=high
 ```
 
-## Deployment and cold live verification
+## Next steps
 
-ACR build `chu0` built the `.git`-excluded source with `BUILD_SHA=309f25e5054d1672dacbf024a573352853b88e9c`. Azure Container Apps reports revision `0000021` healthy with one active replica, `minReplicas=1`, `maxReplicas=1`, and Azure Files `quote-approval-receipt-data` mounted at `/durable`. `/health` returns the exact build SHA.
+Do not release. Correct the production state topology/durable mount so a record written on one API request is readable on the next, and ensure the limiter is shared/effective across every serving instance. Then rerun:
 
-- `npm run test:live-demo`: pass — 20/20 separate Chromium processes observed create 201, immediate read 200, visible sample, empty demo storage after exit, and deleted share 404. Attempt one also proved Reset deletes the prior sample.
-- `npm run test:live-review`: pass — home, builder, Privacy, Terms, and 404 status/title/H1/description/canonical/Open Graph/Twitter/legal-link checks; first-screen fit; same-origin traffic; demo deletion; zero serious/critical Axe issues; zero console errors.
-- `/opt/fleet/lib/verify-url.sh`: pass — 589 ms load, `lang=en`, one H1, main landmark, complete alt text, no unlabeled buttons, no console errors.
-- Link/asset crawl: every public route, robots file, sitemap, icon, social card, and external factory link resolved to 200.
-- Live rate burst: 15×422, then 5×429 with `Retry-After: 1`.
-- Load smoke: 100 concurrent health requests returned 100×200 in 359 ms, about 279 requests/s.
-- Lighthouse 13.0.1 mobile: 100 performance, 100 accessibility, 100 best practices, 100 SEO; FCP 0.93 s, LCP 1.53 s, TBT 6 ms, CLS 0.
+```bash
+LIVE_URL=https://quote-approval-receipt.sociobot.in \
+EXPECTED_BUILD_SHA=adb2748c32faa2da6af03ce8d4b33137c5062dac \
+npm run test:live-demo
+```
 
-The full finding map is in `.factory/polish-3.md`. Durable configuration, browser output, screenshots, Lighthouse summary, and live logs are in `.factory/evidence/polish-3/`.
-
-## Known gaps
-
-None found after the final cold live recheck. No infrastructure, billing provider, or DNS setting was changed outside the supplied Container Apps work-order configuration.
+It must complete 20/20 create/read/cleanup flows. Recheck the fixed-client burst: the first 15 writes may succeed, but the next must return `429` and `Retry-After: 1`. See `.factory/verification-5.md` for full evidence.
