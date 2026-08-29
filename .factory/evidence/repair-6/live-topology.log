@@ -1,0 +1,5 @@
+
+> quote-approval-receipt@1.3.0 test:live-topology
+> node scripts/live-topology-check.mjs
+
+sf-quote-approval-receipt has the required one-replica mounted durable-state contract and public durable health signal.

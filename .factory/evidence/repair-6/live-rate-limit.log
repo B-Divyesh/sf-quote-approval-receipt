@@ -1,0 +1,6 @@
+
+> quote-approval-receipt@1.3.0 test:live-rate-limit
+> node scripts/live-rate-limit-check.mjs
+
+15 concurrent writes succeeded; the 16th admission returned 429 with Retry-After: 1.
+All sample workspaces were removed.

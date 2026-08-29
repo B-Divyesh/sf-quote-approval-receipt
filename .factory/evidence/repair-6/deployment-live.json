@@ -1,0 +1,35 @@
+{
+  "revision": "sf-quote-approval-receipt--0000027",
+  "ready": "sf-quote-approval-receipt--0000027",
+  "image": "sociobotregistry.azurecr.io/sf-quote-approval-receipt:327aa1551253",
+  "env": [
+    {
+      "name": "PORT",
+      "value": "8080"
+    },
+    {
+      "name": "DURABLE_DATA_DIR",
+      "value": "/durable"
+    }
+  ],
+  "mounts": [
+    {
+      "mountPath": "/durable",
+      "volumeName": "durable"
+    }
+  ],
+  "scale": {
+    "cooldownPeriod": 300,
+    "maxReplicas": 1,
+    "minReplicas": 1,
+    "pollingInterval": 30,
+    "rules": null
+  },
+  "volumes": [
+    {
+      "name": "durable",
+      "storageName": "quote-approval-receipt-data",
+      "storageType": "AzureFile"
+    }
+  ]
+}
