@@ -1,6 +1,6 @@
 # Landing copy audit
 
-Audited 2026-08-29. Counts treat hyphenated terms and symbols as one word. No sentence exceeds 22 words. No banned word appears.
+Audited 2026-08-29 after polish round 2. Counts treat hyphenated terms and symbols as one word. No sentence exceeds 22 words. No banned word appears.
 
 | Landing sentence or control | Words | Result |
 | --- | ---: | --- |
@@ -37,6 +37,18 @@ Audited 2026-08-29. Counts treat hyphenated terms and symbols as one word. No se
 | Free links keep records for 30 days. | 7 | pass |
 | Enter a Studio license | 4 | pass |
 | Named quote decisions, kept with the quote. | 7 | pass |
+
+## Updated route copy
+
+| Route sentence or control | Words | Result |
+| --- | ---: | --- |
+| This page was not found | 5 | pass — plain 404 heading |
+| The link may be mistyped, expired, or deleted. | 8 | pass |
+| Quote decision receipt | 3 | pass |
+| Request error | 2 | pass |
+| Ask a legal adviser whether this record meets your needs. | 10 | pass |
+| Reset demo | 2 | pass |
+| Start for real | 3 | pass |
 
 ## Terminology
 

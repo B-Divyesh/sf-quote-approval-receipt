@@ -10,7 +10,7 @@ Open `/?demo=1` after starting the service, or visit:
 
 https://quote-approval-receipt.sociobot.in/?demo=1
 
-The demo creates a random workspace that expires after 24 hours. It stays separate from real quote records. See [`.factory/demo.md`](.factory/demo.md) for the sandbox contract.
+The demo creates a random workspace that expires after 24 hours. It stays separate from real quote records. Resetting or leaving the demo deletes its current workspace. See [`.factory/demo.md`](.factory/demo.md) for the sandbox contract.
 
 ## Run locally
 

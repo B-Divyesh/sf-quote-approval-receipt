@@ -1,1 +1,1 @@
-Record who approved a quote and keep a named PDF receipt.
+Record who approved a quote and issue a named, timestamped PDF receipt.

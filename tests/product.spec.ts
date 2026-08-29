@@ -37,6 +37,18 @@ test('@claim:demo-sandbox sample demo stays separate and readable after creation
     expect(quote.status()).toBe(200);
     expect((await quote.json()).demo).toBe(true);
   }
+
+  await page.getByRole('button', { name: 'Reset demo' }).first().click();
+  await expect(page.getByText('Half-day product shoot')).toBeVisible();
+  expect((await request.get(`/api/share/${demo.quote.public_token}`)).status()).toBe(404);
+  const resetDemo = await page.evaluate(() => JSON.parse(sessionStorage.getItem('demo:workspace')!));
+  expect(resetDemo.workspace).not.toBe(demo.workspace);
+
+  await page.getByRole('link', { name: 'Start for real' }).click();
+  await expect(page).toHaveURL('/new');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Make a quote approval link');
+  expect(await page.evaluate(() => Object.keys(sessionStorage).filter(key => key.startsWith('demo:')))).toEqual([]);
+  expect((await request.get(`/api/share/${resetDemo.quote.public_token}`)).status()).toBe(404);
 });
 
 test('@claim:quote-snapshot an approval link shows the saved quote details', async ({ request }) => {
@@ -252,6 +264,7 @@ test('each public route updates social metadata and the 404 stays within a 390px
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/404-review-missing');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('This page was not found');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 

@@ -269,6 +269,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .route("/receipts/:id", get(get_receipt))
         .route("/receipts/:id/pdf", get(get_receipt_pdf))
         .route("/demo", post(create_demo))
+        .route(
+            "/demo/:workspace",
+            axum::routing::delete(delete_demo_workspace),
+        )
         .route("/demo/:workspace/decision", post(record_demo_decision))
         .route("/studio", get(studio_status))
         .with_state(state.clone());
@@ -890,6 +894,48 @@ async fn create_demo(State(state): State<AppState>) -> ApiResult<(StatusCode, Js
     };
     Ok((StatusCode::CREATED, Json(DemoCreated { workspace, quote })))
 }
+
+async fn delete_demo_workspace(
+    State(state): State<AppState>,
+    Path(workspace): Path<String>,
+) -> ApiResult<StatusCode> {
+    if workspace.len() != 24
+        || !workspace
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric())
+    {
+        return Err(fail(
+            StatusCode::NOT_FOUND,
+            "This demo workspace was not found.",
+        ));
+    }
+
+    let mut transaction = state.db.begin().await.map_err(internal)?;
+    sqlx::query(
+        "DELETE FROM decisions WHERE quote_id IN (SELECT id FROM quotes WHERE demo_workspace=?)",
+    )
+    .bind(&workspace)
+    .execute(&mut *transaction)
+    .await
+    .map_err(internal)?;
+    let deleted = sqlx::query("DELETE FROM quotes WHERE demo_workspace=?")
+        .bind(&workspace)
+        .execute(&mut *transaction)
+        .await
+        .map_err(internal)?
+        .rows_affected();
+    if deleted == 0 {
+        transaction.rollback().await.map_err(internal)?;
+        return Err(fail(
+            StatusCode::NOT_FOUND,
+            "This demo workspace was not found.",
+        ));
+    }
+    transaction.commit().await.map_err(internal)?;
+    persist_database(&state).await.map_err(internal)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 async fn record_demo_decision(
     State(state): State<AppState>,
     Path(workspace): Path<String>,

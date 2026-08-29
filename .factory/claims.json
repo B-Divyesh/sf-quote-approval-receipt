@@ -1,10 +1,10 @@
 [
   {
     "id": "demo-sandbox",
-    "claim": "The sample demo stays separate from real records and remains readable after creation.",
+    "claim": "The sample demo stays separate from real records, resets cleanly, and is deleted when the visitor leaves it.",
     "where": "landing action note, demo banner, README, privacy",
     "test": "npm test -- --grep @claim:demo-sandbox",
-    "sandbox": "fresh browser context; open /?demo=1; verify no owner keys and repeat the post-create read 20 times"
+    "sandbox": "fresh browser context; open /?demo=1; verify no owner keys and repeat the post-create read 20 times; reset and exit, then assert both old workspaces return 404 and no demo storage remains"
   },
   {
     "id": "quote-snapshot",
