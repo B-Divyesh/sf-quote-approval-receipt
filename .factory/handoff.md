@@ -1,33 +1,31 @@
-# Verification 5 handoff — Quote Approval Receipt
+# Repair 5 handoff — Quote Approval Receipt
 
-- Work order: `quote-approval-receipt-verify-5`
-- Verified candidate: `adb2748c32faa2da6af03ce8d4b33137c5062dac`
+- Work order: `quote-approval-receipt-repair-5`
+- Repaired application commit: `4d68afe8ba19f84a7e83e90e8a006426addd6621`
 - Live URL: <https://quote-approval-receipt.sociobot.in>
-- Verdict: **FAIL — do not release**
+- Live revision: `sf-quote-approval-receipt--0000023`
+- Image: `sociobotregistry.azurecr.io/sf-quote-approval-receipt:repair-5`
+- Image digest: `sha256:8bb40fcb016866e7d89e21412c234b0cc80e2e1576c3967fc76d1084facae653`
 
-## Verification result
+## Fixed release blockers
 
-No product code was changed by this verification. The deployed app is exactly the candidate: live `/health`, the footer build ID, and a SHA-256 comparison of the live JavaScript asset match `adb2748…`.
+The verifier's `POST /api/demo` followed by `GET /api/share/<token>` failure was a release-topology defect, not a front-end mismatch. Before this repair, the real Container App had `maxReplicas: 3`, no Azure Files volume, and no `DURABLE_DATA_DIR`, even though the committed deployment contract said otherwise. That split local SQLite copies and the in-memory rate limiter across replicas.
 
-Local build, runtime, durability, accessibility, and claim checks pass after `npm ci`. The production backend does not: a required `/?demo=1` run receives `POST /api/demo` 201 followed immediately by `GET /api/share/<returned-token>` 404, rendering “The demo could not start”. The product’s own `npm run test:live-demo` now fails at its first attempt with that same 404.
+The live template is now the checked contract: one active serving replica (`minReplicas: 1`, `maxReplicas: 1`), Azure Files share `quote-approval-receipt-data` mounted at `/durable`, and `DURABLE_DATA_DIR=/durable`. The service's committed snapshots now restore across replacement, and its process-wide limiter is global for the one-replica deployment. `/health` now exposes `durable_snapshot`; live returns `true` alongside the exact build SHA so a release check can prove this topology.
 
-The live server also accepts 20 writes from one fixed forwarded client address despite its documented 15-write/sec allowance; no response is 429 and no `Retry-After` header is sent. These are release-blocking deployment defects.
+Regression coverage added:
 
-## How verified
+- `tests/durable-snapshot.mjs` asserts the mount, exact one-replica manifest, replacement persistence for 20 records, and durable health mode.
+- `@claim:rate-limits` now asserts exactly fifteen accepted writes and a sixteenth `429` with `Retry-After: 1`.
+- `npm run test:live-topology` interrogates the actual Container Apps template; it failed before deploy on `maxReplicas: 3` and passes on revision `0000023`.
+- `npm run test:live-rate-limit` sends a concurrent sixteen-write admission burst, requires 15 `201` plus one `429` and `Retry-After: 1`, and removes all sample workspaces even on failure.
 
-On the clean candidate checkout:
+## Verification
 
-- `npm ci`; every manifest claim command; `npm test`; `npm run check`; `cargo fmt --check`; `cargo clippy --all-targets -- -D warnings`; `npm audit --audit-level=high`: PASS locally.
-- `npm run build` with candidate Vite build ID: PASS, `dist/` produced. Live JS SHA-256 matched exactly.
-- Live landing: plain-language first screen, first-party-only request log, headers, mobile 390 px, keyboard/static suite, reduced motion, and axe serious/critical checks: PASS.
-- Live demo and rate limit: FAIL as described above.
-
-Run local gates with:
+Clean local install and release gates passed:
 
 ```bash
 npm ci
-mapfile -t claim_tests < <(jq -r '.[].test' .factory/claims.json)
-for claim_test in "${claim_tests[@]}"; do bash -lc "$claim_test"; done
 npm test
 npm run check
 cargo fmt --check
@@ -35,14 +33,31 @@ cargo clippy --all-targets -- -D warnings
 npm audit --audit-level=high
 ```
 
-## Next steps
+`npm test` passed all 13 claim mappings, production TypeScript/Vite build, 4 Rust tests, only-`PORT` runtime start, durable replacement test, and 20 Playwright desktop/mobile checks. Production output remains 27.11 kB JS (8.96 kB gzip) and 15.55 kB CSS (4.20 kB gzip).
 
-Do not release. Correct the production state topology/durable mount so a record written on one API request is readable on the next, and ensure the limiter is shared/effective across every serving instance. Then rerun:
+Live checks on the released build:
 
 ```bash
+npm run test:live-topology
 LIVE_URL=https://quote-approval-receipt.sociobot.in \
-EXPECTED_BUILD_SHA=adb2748c32faa2da6af03ce8d4b33137c5062dac \
+EXPECTED_BUILD_SHA=4d68afe8ba19f84a7e83e90e8a006426addd6621 \
 npm run test:live-demo
+LIVE_URL=https://quote-approval-receipt.sociobot.in npm run test:live-rate-limit
 ```
 
-It must complete 20/20 create/read/cleanup flows. Recheck the fixed-client burst: the first 15 writes may succeed, but the next must return `429` and `Retry-After: 1`. See `.factory/verification-5.md` for full evidence.
+- Topology check: pass; one mounted durable replica.
+- Build identity: `/health` returns `4d68afe8ba19f84a7e83e90e8a006426addd6621` and `durable_snapshot: true`.
+- Demo core flow: pass; 20/20 separate 390 px Chromium contexts created (`201`), read (`200`), and deleted (`404`) isolated sample workspaces.
+- Rate limit: pass; 15 concurrent writes returned `201`; the sixteenth admission returned `429` with `Retry-After: 1`; all samples were removed.
+- Live mobile review: pass; landing, builder, Privacy, Terms, 404, demo cleanup, same-origin request policy, metadata, no horizontal overflow, and zero serious/critical Axe violations through Playwright AxeBuilder. Evidence is in `.factory/evidence/repair-5/`.
+- `/opt/fleet/lib/verify-url.sh`: pass; 571 ms desktop load, title/lang/one H1/main/alt/button checks pass, no console errors. The standalone Axe CLI was attempted with its default browser and the installed Playwright Chromium, but its Selenium ChromeDriver is version-mismatched; the equivalent Playwright AxeBuilder audit above passed for every public route.
+
+The ACR build `chv7` built the source tarball with `.git` excluded and `BUILD_SHA=4d68afe…`.
+
+## Deployment
+
+The Container App was patched with the work-order configuration in `.factory/containerapp-deploy.json` after the ACR build. Do not scale this service above one replica without moving both record state and rate-limit state to a shared transactional service. The checked deployment manifest and `npm run test:live-topology` are the regression guard against reintroducing the replica split.
+
+## Known gaps
+
+None for the product release. The optional standalone Axe CLI needs a ChromeDriver matching the preinstalled Chromium; release accessibility coverage uses the repository's Playwright Axe integration and passed live.
