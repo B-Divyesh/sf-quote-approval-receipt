@@ -1,0 +1,19 @@
+{
+  "url": "https://quote-approval-receipt.sociobot.in",
+  "formFactor": "mobile",
+  "scores": {
+    "performance": 98,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100
+  },
+  "metrics": {
+    "firstContentfulPaint": "1.0 s",
+    "largestContentfulPaint": "1.6 s",
+    "totalBlockingTime": "150 ms",
+    "cumulativeLayoutShift": 0,
+    "speedIndex": "1.0 s"
+  },
+  "totalTransferBytes": 120766,
+  "thirdPartyRequests": 0
+}
