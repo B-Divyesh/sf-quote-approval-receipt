@@ -1,22 +1,38 @@
-# Review 4 handoff
+# Polish round 4 handoff
 
-- Work order: `quote-approval-receipt-review-4`
-- Scope: adversarial review only; product code was not modified.
-- Commit reviewed: `5f38e5c220c03db9a570ebd82aea6769b7209d74`
-- Live build observed: `8f22bab8d72a2c9ea7bb6a19c44af86083fa589a`
-- Verdict: **FAIL** — one minor claims-manifest finding remains; see `.factory/review-4.md`.
+- Work order: `quote-approval-receipt-polish-4`
+- Repair commit: `cfac15d79d708086b8324d8ca2902defe96c4c50`
+- Live URL: <https://quote-approval-receipt.sociobot.in>
+- Deployed revision: `sf-quote-approval-receipt--polish4`
+- Image: `sociobotregistry.azurecr.io/sf-quote-approval-receipt:repair-8`
 
-## Completed
+## What changed
 
-- Inspected the brief, visual thesis, claims manifest, demo contract, every earlier review/polish record, verification record, and prior handoff.
-- Tested the deployed site cold at 390×844 and 1440×900, then checked direct demo, reset, exit, request isolation, route metadata, links, mobile bounds, keyboard focus, 404, and live health.
-- Confirmed 20 independent cross-client demo create/read/delete cycles: 201 → 200 → 204 → 404.
-- Ran every literal command in `.factory/claims.json` individually from a clean GitHub clone after `npm ci`; all passed.
-
-## Remaining work
-
-The README says the strict one-replica deployment makes the 15-write-per-second limit global. That specific production-global claim is not in `.factory/claims.json` and its exact local claim test cannot prove it. Remove the sentence or add a separately listed deployment-level claim/test.
+- Removed the final unlisted, untestable README assertion that one replica makes the 15-write allowance global.
+- Removed the matching assertion from the operator deployment guide and added a manifest-gate regression that rejects both phrases.
+- Updated the catalog sentence to `Record quote approvals and issue a named, timestamped PDF receipt.`
+- Reapplied the declared one-replica Azure Files deployment contract. Existing product repairs remain present: isolated one-click demo, reset/exit deletion, fixed quote/PDF workflow, sender receipt access, metadata/routing/404, mobile layout, and literal copy.
 
 ## Verification
 
-Use the commands in `.factory/claims.json` from a clean clone, then repeat the live mobile and cross-client demo checks described in `.factory/review-4.md`. The repository remains buildable; this review added documentation only.
+- Clean GitHub clone at `cfac15d79d708086b8324d8ca2902defe96c4c50`: `npm ci` had zero vulnerabilities; every command in `.factory/claims.json` passed individually.
+- `npm test` passed: 4 Rust tests and 20 Playwright tests. `npm run build`, `npm run check`, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, and `npm audit --audit-level=high` passed.
+- ACR build `chwu` succeeded from a `.git`-excluded source archive. The deployed health response is `{"build_sha":"cfac15d79d708086b8324d8ca2902defe96c4c50","durable_snapshot":true,"status":"ok"}`.
+- Live: `test:live-topology` passed; `test:live-demo` completed 20/20 fresh-process create `201` → read `200` → cleanup `404` cycles; `test:live-rate-limit` observed 15 writes then a `429` with `Retry-After: 1`; `test:live-review` passed all checked routes with zero serious/critical Axe violations.
+- `verify-url.sh` passed with no console errors, one H1, `lang=en`, main landmark, and complete image alt text. Lighthouse scored 100 Performance, 100 Accessibility, 100 Best Practices, and 100 SEO; LCP 0.1 s, TBT 0 ms, CLS 0.
+- Evidence and screenshots are in `.factory/evidence/polish-4/`; the finding-by-finding receipt is [`.factory/polish-4.md`](polish-4.md).
+
+## Run and deploy
+
+```sh
+npm ci
+npm test
+npm run build
+PORT=8080 cargo run
+```
+
+The container starts with only `PORT`; production uses one replica with the `/durable` Azure Files mount and `DURABLE_DATA_DIR=/durable`.
+
+## Known gaps
+
+None.
