@@ -5,7 +5,7 @@
 - Failed candidate: `aea90d11a961be20b07825a5a917fa092268324d`
 - Repair source: `d71f61a81007f06ae5937cce5a691b0c7e88cc1d`
 - Live URL: <https://quote-approval-receipt.sociobot.in>
-- Active revision: `sf-quote-approval-receipt--0000033`
+- Recorded repair revision: `sf-quote-approval-receipt--0000033`
 - Release decision: **PASS**
 
 ## Finding reproduced and repaired
@@ -40,6 +40,8 @@ The exact repair image was deployed through that renderer. Azure now has one act
 - Live response policy — PASS. Public responses include CSP `frame-ancestors 'none'`, `nosniff`, `no-referrer`, frame denial, and restricted permissions. Private HTML/API data is `no-store` and `noindex, nofollow, noarchive`. Hashed assets are immutable for one year.
 - Mobile Lighthouse — 100 performance, 100 accessibility, 100 best practices, and 100 SEO. FCP was 1,004 ms, LCP 1,604 ms, TBT 41 ms, CLS 0, and transfer size 120,735 bytes. See [report](evidence/repair-9/lighthouse.report.json).
 - Three-second 100 requests/second health smoke — PASS. All 300 requests returned `200`; p50 was 34 ms, p95 242 ms, and maximum 322 ms.
+
+The docs-and-evidence commit `4921f9ffe39b436eb5871526a063c218ee935938` was then deployed as revision `0000034`. Health returned that exact SHA with durable mode enabled. Topology, cross-context workflow, 20 isolated demos, and both rate-limit boundaries passed again.
 
 This web-with-backend product has no consumer package, sign-in flow, service worker, or PWA. Package-install, identity-provider, offline-update, and service-worker checks do not apply. Its useful offline error state passed in Playwright.
 
