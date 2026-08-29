@@ -322,20 +322,52 @@ test('each public route has real status, metadata, headings, legal links, and a 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('@mobile 390px pages reflow at 200% text and controls meet target size', async ({ page }) => {
+async function waitForMobileScreen(page: import('@playwright/test').Page, path: string) {
+  await page.goto(path);
+  if (path === '/?demo=1' || path === '/demo') {
+    // The demo deliberately renders a loading shell while it creates its
+    // isolated workspace. Do not audit the shell while it is being replaced:
+    // detached controls report 0 × 0 even though they were never presented
+    // to a visitor. The target-size audit must cover the usable sample quote.
+    await expect(page.getByRole('heading', { level: 1, name: 'Review and decide on this quote' })).toBeVisible();
+    await expect(page.getByText('Half-day product shoot')).toBeVisible();
+    await expect(page.locator('.loading')).toHaveCount(0);
+  }
+}
+
+async function mobileControlSizes(page: import('@playwright/test').Page) {
+  return page.locator('a:visible, button:visible').evaluateAll(nodes => nodes
+    .map(node => {
+      const box = node.getBoundingClientRect();
+      return {
+        text: node.textContent?.trim(),
+        width: Math.ceil(box.width),
+        height: Math.ceil(box.height),
+      };
+    })
+    .filter(control => control.width < 44 || control.height < 44));
+}
+
+test('@mobile 390px usable pages reflow at 200% text and controls meet target size', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   for (const path of ['/', '/new', '/?demo=1', '/demo', '/privacy', '/terms', '/404-review-missing']) {
-    await page.goto(path);
+    await waitForMobileScreen(page, path);
     await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   for (const path of ['/', '/new', '/?demo=1', '/privacy', '/terms', '/404-review-missing']) {
-    await page.goto(path);
-    const undersized = await page.locator('a:visible, button:visible').evaluateAll(nodes => nodes
-      .map(node => ({ text: node.textContent?.trim(), box: node.getBoundingClientRect() }))
-      .filter(({ box }) => box.width < 44 || box.height < 44));
+    await waitForMobileScreen(page, path);
+    const undersized = await mobileControlSizes(page);
     expect(undersized, `${path} has undersized controls`).toEqual([]);
   }
+});
+
+test('@mobile @regression:mobile-demo target audit waits for the rendered sample quote', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForMobileScreen(page, '/?demo=1');
+  await expect(page.getByRole('button', { name: 'Reset demo' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Start for real' })).toBeVisible();
+  expect(await mobileControlSizes(page)).toEqual([]);
 });
 
 test('all public screens have no serious accessibility errors and reduced motion stops animation', async ({ page }) => {
